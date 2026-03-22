@@ -150,6 +150,50 @@ struct ContentView: View {
                         .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
 
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("歌曲種類")
+                        .font(.subheadline.weight(.semibold))
+
+                    Picker("歌曲種類", selection: $viewModel.selectedSongCategory) {
+                        ForEach(SongCategoryOption.allCases) { category in
+                            Text(category.title).tag(category)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    Text(viewModel.selectedSongCategory.detail)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("歌曲年代")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(viewModel.songPreferences.eraSummary)
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    EraRangeSlider(
+                        lowerIndex: Binding(
+                            get: { eraIndex(for: viewModel.selectedEraRangeStart) },
+                            set: { viewModel.selectedEraRangeStart = eraOption(at: $0) }
+                        ),
+                        upperIndex: Binding(
+                            get: { eraIndex(for: viewModel.selectedEraRangeEnd) },
+                            set: { viewModel.selectedEraRangeEnd = eraOption(at: $0) }
+                        ),
+                        options: SongEraOption.allCases
+                    )
+                    .frame(height: 88)
+
+                    Text("由 70 年代揀到現代，Geddy 會盡量將歌單鎖定喺你指定嘅年代範圍。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
                 Button {
                     Task {
                         await viewModel.prepareShow()
@@ -240,13 +284,35 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if let item = viewModel.currentPlaybackItem {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("現正播放")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                            HStack {
+                                Label(playbackKindLabel(for: item), systemImage: playbackSymbol(for: item))
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(viewModel.isPlaying ? "播放中" : "已暫停")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(viewModel.isPlaying ? Color(red: 0.84, green: 0.37, blue: 0.18) : .secondary)
+                            }
+
                             Text(item.title)
                                 .font(.headline)
                             Text(item.subtitle)
                                 .foregroundStyle(.secondary)
+
+                            VStack(spacing: 8) {
+                                ProgressView(value: viewModel.playbackProgress)
+                                    .tint(Color(red: 0.84, green: 0.37, blue: 0.18))
+
+                                HStack {
+                                    Text(viewModel.playbackElapsedText)
+                                        .monospacedDigit()
+                                    Spacer()
+                                    Text(viewModel.playbackRemainingText)
+                                        .monospacedDigit()
+                                }
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            }
                         }
                     } else {
                         Text("節目已就緒，可以開始播放。")
@@ -384,6 +450,119 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.35), lineWidth: 1)
         )
+    }
+
+    private func eraIndex(for option: SongEraOption) -> Int {
+        SongEraOption.allCases.firstIndex(of: option) ?? 0
+    }
+
+    private func eraOption(at index: Int) -> SongEraOption {
+        let clampedIndex = min(max(index, 0), SongEraOption.allCases.count - 1)
+        return SongEraOption.allCases[clampedIndex]
+    }
+
+    private func playbackKindLabel(for item: StationPlaybackItem) -> String {
+        switch item.kind {
+        case .opening:
+            return "開場白"
+        case .song:
+            return "歌曲"
+        case .bridge:
+            return "過場獨白"
+        case .closing:
+            return "收場白"
+        }
+    }
+
+    private func playbackSymbol(for item: StationPlaybackItem) -> String {
+        switch item.kind {
+        case .song:
+            return "music.note"
+        case .opening, .bridge, .closing:
+            return "mic.fill"
+        }
+    }
+}
+
+private struct EraRangeSlider: View {
+    @Binding var lowerIndex: Int
+    @Binding var upperIndex: Int
+    let options: [SongEraOption]
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = max(geometry.size.width - 28, 1)
+            let stepWidth = width / CGFloat(max(options.count - 1, 1))
+            let lowerX = 14 + CGFloat(lowerIndex) * stepWidth
+            let upperX = 14 + CGFloat(upperIndex) * stepWidth
+
+            VStack(spacing: 14) {
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.48))
+                        .frame(height: 8)
+
+                    Capsule()
+                        .fill(Color(red: 0.84, green: 0.37, blue: 0.18))
+                        .frame(width: max(upperX - lowerX, 8), height: 8)
+                        .offset(x: lowerX)
+
+                    ForEach(Array(options.enumerated()), id: \.offset) { index, option in
+                        VStack(spacing: 8) {
+                            Circle()
+                                .fill(index >= lowerIndex && index <= upperIndex
+                                    ? Color(red: 0.84, green: 0.37, blue: 0.18)
+                                    : Color.white.opacity(0.9)
+                                )
+                                .frame(width: 10, height: 10)
+                            Text(option.shortTitle)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .position(x: 14 + CGFloat(index) * stepWidth, y: 20)
+                    }
+
+                    thumb
+                        .position(x: lowerX, y: 4)
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    let index = snappedIndex(for: value.location.x, width: width)
+                                    lowerIndex = min(index, upperIndex)
+                                }
+                        )
+
+                    thumb
+                        .position(x: upperX, y: 4)
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    let index = snappedIndex(for: value.location.x, width: width)
+                                    upperIndex = max(index, lowerIndex)
+                                }
+                        )
+                }
+                .frame(height: 44)
+            }
+        }
+    }
+
+    private var thumb: some View {
+        Circle()
+            .fill(Color.white)
+            .frame(width: 28, height: 28)
+            .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+            .overlay(
+                Circle()
+                    .stroke(Color(red: 0.84, green: 0.37, blue: 0.18), lineWidth: 3)
+            )
+    }
+
+    private func snappedIndex(for locationX: CGFloat, width: CGFloat) -> Int {
+        guard options.count > 1 else { return 0 }
+        let stepWidth = width / CGFloat(options.count - 1)
+        let offset = min(max(locationX - 14, 0), width)
+        return Int((offset / stepWidth).rounded())
     }
 }
 

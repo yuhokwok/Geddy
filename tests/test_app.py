@@ -97,6 +97,9 @@ class AppTestCase(unittest.TestCase):
             json={
                 "transcript": "今晚有啲掛住以前嘅感情",
                 "desired_song_count": 6,
+                "song_category": "mandarin",
+                "era_range_start": 1990,
+                "era_range_end": 2010,
             },
         )
         self.assertEqual(response.status_code, 200)
@@ -111,6 +114,33 @@ class AppTestCase(unittest.TestCase):
     def test_program_request_validates_song_count_range(self):
         with self.assertRaisesRegex(ValueError, "between 5 and 8"):
             DJProgramRequest.from_payload({"transcript": "hello", "desired_song_count": 3})
+
+    def test_program_request_accepts_song_preferences(self):
+        request = DJProgramRequest.from_payload(
+            {
+                "transcript": "想聽舊歌",
+                "desired_song_count": 6,
+                "song_category": "廣東歌",
+                "era_range_start": 1980,
+                "era_range_end": 2000,
+            }
+        )
+
+        self.assertEqual(request.song_category, "cantonese")
+        self.assertEqual(request.era_range_start, 1980)
+        self.assertEqual(request.era_range_end, 2000)
+
+    def test_program_request_rejects_invalid_era_range(self):
+        with self.assertRaisesRegex(ValueError, "less than or equal"):
+            DJProgramRequest.from_payload(
+                {
+                    "transcript": "hello",
+                    "desired_song_count": 6,
+                    "song_category": "mandarin",
+                    "era_range_start": 2010,
+                    "era_range_end": 1980,
+                }
+            )
 
     def test_rule_based_planner_uses_time_neutral_copy(self):
         planner = RuleBasedDJProgramPlanner()
@@ -127,12 +157,39 @@ class AppTestCase(unittest.TestCase):
         self.assertNotIn("夜深啦", combined_text)
         self.assertNotIn("今晚", combined_text)
 
-    def test_create_default_planner_uses_module_constant_for_openrouter_key(self):
-        with patch.object(dj_program_module, "OPENROUTER_API_KEY", ""):
+    def test_rule_based_planner_filters_by_song_preferences(self):
+        planner = RuleBasedDJProgramPlanner()
+        program = planner.make_program(
+            DJProgramRequest.from_payload(
+                {
+                    "transcript": "想聽舊日回憶",
+                    "desired_song_count": 6,
+                    "song_category": "mandarin",
+                    "era_range_start": 1970,
+                    "era_range_end": 1980,
+                }
+            )
+        )
+
+        titles = {song.titleHint for song in program.songSuggestions}
+        self.assertIn("月亮代表我的心", titles)
+        self.assertIn("明天你是否依然愛我", titles)
+        self.assertNotIn("明年今日", titles)
+
+    def test_create_default_planner_handles_missing_openrouter_key_file(self):
+        with patch.object(dj_program_module, "load_openrouter_api_key", return_value=""):
             planner = create_default_planner()
 
         self.assertIsInstance(planner, OpenRouterBackedDJProgramPlanner)
         self.assertIsNone(planner.primary)
+
+    def test_load_openrouter_api_key_reads_json_file(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "openrouter_api_key.json"
+            config_path.write_text('{"api_key": "test-json-key"}', encoding="utf-8")
+
+            with patch.object(dj_program_module, "OPENROUTER_API_KEY_CONFIG_PATH", config_path):
+                self.assertEqual(dj_program_module.load_openrouter_api_key(), "test-json-key")
 
     def test_openrouter_planner_uses_json_schema_response_format(self):
         planner = OpenRouterDJProgramPlanner(api_key="test-key")

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Protocol
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -17,8 +18,18 @@ DEFAULT_HOST_STYLE = """
 
 DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-4.6"
 #"openai/gpt-4o-mini"
-OPENROUTER_API_KEY = "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"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_API_KEY_CONFIG_PATH = (
+    Path(__file__).resolve().parent / "openrouter_api_key.json"
+)
+SONG_CATEGORY_CANTONESE = "cantonese"
+SONG_CATEGORY_MANDARIN = "mandarin"
+SUPPORTED_SONG_CATEGORIES = {
+    SONG_CATEGORY_CANTONESE,
+    SONG_CATEGORY_MANDARIN,
+}
+SUPPORTED_ERA_STARTS = (1970, 1980, 1990, 2000, 2010)
+MODERN_ERA_START = 2010
 
 
 class DJProgramPlanning(Protocol):
@@ -78,6 +89,9 @@ class DJProgramRequest:
     transcript: str
     host_style: str = DEFAULT_HOST_STYLE
     desired_song_count: int = 8
+    song_category: str = SONG_CATEGORY_CANTONESE
+    era_range_start: int = 2000
+    era_range_end: int = MODERN_ERA_START
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "DJProgramRequest":
@@ -88,6 +102,17 @@ class DJProgramRequest:
         desired_song_count = _coerce_int(
             payload.get("desired_song_count", payload.get("song_count", 6)),
             "desired_song_count",
+        )
+        song_category = _normalize_song_category(
+            payload.get("song_category", SONG_CATEGORY_CANTONESE)
+        )
+        era_range_start = _coerce_int(
+            payload.get("era_range_start", 2000),
+            "era_range_start",
+        )
+        era_range_end = _coerce_int(
+            payload.get("era_range_end", MODERN_ERA_START),
+            "era_range_end",
         )
 
         if not transcript:
@@ -102,11 +127,24 @@ class DJProgramRequest:
             )
         if desired_song_count < 5 or desired_song_count > 8:
             raise ValidationError("`desired_song_count` must be between 5 and 8.")
+        if era_range_start not in SUPPORTED_ERA_STARTS:
+            raise ValidationError(
+                "`era_range_start` must be one of 1970, 1980, 1990, 2000, or 2010."
+            )
+        if era_range_end not in SUPPORTED_ERA_STARTS:
+            raise ValidationError(
+                "`era_range_end` must be one of 1970, 1980, 1990, 2000, or 2010."
+            )
+        if era_range_start > era_range_end:
+            raise ValidationError("`era_range_start` must be less than or equal to `era_range_end`.")
 
         return cls(
             transcript=transcript,
             host_style=host_style or DEFAULT_HOST_STYLE,
             desired_song_count=desired_song_count,
+            song_category=song_category,
+            era_range_start=era_range_start,
+            era_range_end=era_range_end,
         )
 
 
@@ -200,7 +238,14 @@ class ThemePack:
     mood: str
     opening_lead: str
     closing_lead: str
-    songs: tuple[SongSuggestion, ...]
+    songs: tuple["CuratedSong", ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CuratedSong:
+    era_start: int
+    category: str
+    suggestion: SongSuggestion
 
 
 class OpenRouterDJProgramPlanner:
@@ -252,7 +297,6 @@ class OpenRouterDJProgramPlanner:
         )
 
         try:
-            print("yoyoy")
             with urllib_request.urlopen(
                 http_request,
                 timeout=self.timeout_seconds,
@@ -260,21 +304,17 @@ class OpenRouterDJProgramPlanner:
                 raw_body = response.read()
         except urllib_error.HTTPError as exc:
             error_body = exc.read().decode("utf-8", errors="replace")
-            print(f"OpenRouter returned HTTP {exc.code}: {error_body}")
             raise RuntimeError(
                 f"OpenRouter returned HTTP {exc.code}: {error_body}"
             ) from exc
         except urllib_error.URLError as exc:
-            print("yoyoy3")
             raise RuntimeError(
                 f"Could not reach OpenRouter: {exc.reason}"
             ) from exc
 
         try:
-            print("raw_body:", raw_body.decode("utf-8"))
             decoded = json.loads(raw_body.decode("utf-8"))
         except json.JSONDecodeError as exc:
-            print("runtime error:", raw_body.decode("utf-8"))
             raise RuntimeError("OpenRouter returned invalid JSON.") from exc
 
         content = _extract_openrouter_content(decoded)
@@ -421,7 +461,7 @@ Required JSON shape:
 Rules:
 - 用字一定一定要香港廣東話口語，可以中英夾雜.
 - Songs should be emotionally coherent with the listener's situation.
-- Prefer songs that are Cantonese pop songs when relevant 2000 年代至今.
+- Honor the requested song category and era range exactly unless the user explicitly asks to break that rule.
 - 用鄭子誠式嘅陪伴口吻做口應，然後歌與歌之間就住歌曲按排一段感性嘅說話，要提及下一首歌的內容，歌與歌手名字要正確，不要胡亂生成！
 - Do not search Apple Music, validate catalog availability, or return Apple Music IDs, URLs, or metadata.
 - songSuggestions are only editorial hints for the iOS app. The iOS app will run MusicKit search later using titleHint, artistHint, and searchQuery.
@@ -440,7 +480,13 @@ Listener transcript:
 Requested host style:
 {request.host_style}
 
-Please create a complete radio program plan with exactly {request.desired_song_count} songs.
+Requested song category:
+{_song_category_label(request.song_category)}
+
+Requested era range:
+{_era_range_label(request.era_range_start, request.era_range_end)}
+
+Please create a complete radio program plan with exactly {request.desired_song_count} songs that stay inside the requested category and era range.
 Return song suggestions only. Music lookup will be handled by the iOS app after this response.
 """.strip()
 
@@ -449,10 +495,11 @@ class RuleBasedDJProgramPlanner:
     def __init__(self) -> None:
         self._theme_packs = _build_theme_packs()
         self._default_theme = _build_default_theme()
+        self._catalog_songs = _collect_catalog_songs((*self._theme_packs, self._default_theme))
 
     def make_program(self, request: DJProgramRequest) -> DJProgram:
         theme = self._pick_theme(request.transcript)
-        songs = list(theme.songs[: request.desired_song_count])
+        songs = self._select_songs(theme, request)
         transcript = request.transcript.strip()
 
         opening = "\n".join(
@@ -460,7 +507,7 @@ class RuleBasedDJProgramPlanner:
                 "呢度係 Geddy。",
                 f"你頭先講咗一句：「{transcript}」。",
                 "有啲感受，唔一定要即刻講清楚，但可以慢慢聽清楚。",
-                f"我想用幾首歌，同你一齊行過呢一段 {theme.mood}。",
+                f"我想用一組{_song_category_label(request.song_category)}，陪你由{_era_range_label(request.era_range_start, request.era_range_end)}一路行過呢段 {theme.mood}。",
                 theme.opening_lead,
             ]
         )
@@ -505,6 +552,37 @@ class RuleBasedDJProgramPlanner:
                 return theme
         return self._default_theme
 
+    def _select_songs(
+        self,
+        theme: ThemePack,
+        request: DJProgramRequest,
+    ) -> list[SongSuggestion]:
+        matched_theme_songs = [
+            item.suggestion
+            for item in theme.songs
+            if _matches_preferences(item, request)
+        ]
+        matched_catalog_songs = [
+            item.suggestion
+            for item in self._catalog_songs
+            if _matches_preferences(item, request)
+        ]
+
+        ordered = _dedupe_song_suggestions(
+            (*matched_theme_songs, *matched_catalog_songs)
+        )
+
+        if len(ordered) < request.desired_song_count:
+            ordered = _dedupe_song_suggestions(
+                (
+                    *ordered,
+                    *[item.suggestion for item in theme.songs],
+                    *[item.suggestion for item in self._catalog_songs],
+                )
+            )
+
+        return ordered[: request.desired_song_count]
+
 
 class OpenRouterBackedDJProgramPlanner:
     def __init__(
@@ -518,18 +596,15 @@ class OpenRouterBackedDJProgramPlanner:
     def make_program(self, request: DJProgramRequest) -> DJProgram:
         if self.primary is not None:
             try:
-                print("primary program planner")
                 return self.primary.make_program(request)
             except RuntimeError:
-                print("fallback planner 1")
                 return self.fallback.make_program(request)
-        print("fallback planner 2")
         return self.fallback.make_program(request)
 
 
 def create_default_planner() -> DJProgramPlanning:
     fallback = RuleBasedDJProgramPlanner()
-    api_key = OPENROUTER_API_KEY.strip()
+    api_key = load_openrouter_api_key().strip()
     if not api_key:
         return OpenRouterBackedDJProgramPlanner(primary=None, fallback=fallback)
 
@@ -567,6 +642,25 @@ def _extract_openrouter_content(payload: dict[str, Any]) -> str:
     raise RuntimeError("OpenRouter response did not include textual content.")
 
 
+def load_openrouter_api_key() -> str:
+    try:
+        raw_payload = OPENROUTER_API_KEY_CONFIG_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ""
+    except OSError:
+        return ""
+
+    try:
+        payload = json.loads(raw_payload)
+    except json.JSONDecodeError:
+        return ""
+
+    if not isinstance(payload, dict):
+        return ""
+
+    return str(payload.get("api_key", "")).strip()
+
+
 def _build_theme_packs() -> list[ThemePack]:
     return [
         ThemePack(
@@ -576,14 +670,22 @@ def _build_theme_packs() -> list[ThemePack]:
             opening_lead="如果你仲喺某段關係門口徘徊，希望呢個 playlist 可以陪你坐低一陣。",
             closing_lead="記住，真正重要嘅唔係你幾時忘記，而係你幾時肯重新溫柔對待自己。",
             songs=(
-                SongSuggestion("明年今日", "陳奕迅", "明年今日 陳奕迅", "第一首先用熟悉嘅遺憾感，帶住聽眾慢慢跌入情緒。"),
-                SongSuggestion("鍾無艷", "謝安琪", "鍾無艷 謝安琪", "寫畀那些明明付出過，卻未被珍惜的人。"),
-                SongSuggestion("如果讓我說下去", "楊千嬅", "如果讓我說下去 楊千嬅", "延續想講未講的心事，令節目情緒更深。"),
-                SongSuggestion("愛與誠", "古巨基", "愛與誠 古巨基", "將關係中最沉重的真心擺上檯面。"),
-                SongSuggestion("小城大事", "楊千嬅", "小城大事 楊千嬅", "讓思念由個人回憶擴散成城市夜色。"),
-                SongSuggestion("好心分手", "盧巧音", "好心分手 盧巧音", "最後用比較收斂但仍然刺心的角度作結。"),
-                SongSuggestion("痛愛", "容祖兒", "痛愛 容祖兒", "再將情緒推近一點，令遺憾有更直接的重量。"),
-                SongSuggestion("終身美麗", "鄭秀文", "終身美麗 鄭秀文", "用一種成熟的目光，把不捨慢慢放低。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "明年今日", "陳奕迅", "第一首先用熟悉嘅遺憾感，帶住聽眾慢慢跌入情緒。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "鍾無艷", "謝安琪", "寫畀那些明明付出過，卻未被珍惜的人。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "如果讓我說下去", "楊千嬅", "延續想講未講的心事，令節目情緒更深。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "愛與誠", "古巨基", "將關係中最沉重的真心擺上檯面。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "好心分手", "盧巧音", "最後用比較收斂但仍然刺心的角度作結。"),
+                _curated_song(1990, SONG_CATEGORY_CANTONESE, "追", "張國榮", "用偏向懷念的角度，放大掛住一個人的失重感。"),
+                _curated_song(1980, SONG_CATEGORY_CANTONESE, "一生何求", "陳百強", "將舊情未放低的重量拉回經典年代。"),
+                _curated_song(2010, SONG_CATEGORY_CANTONESE, "高山低谷", "林奕匡", "讓情緒由失落慢慢行到面對自己。"),
+                _curated_song(2000, SONG_CATEGORY_MANDARIN, "十年", "陳奕迅", "把熟悉的遺憾感轉成更直接的華語流行情緒。"),
+                _curated_song(2000, SONG_CATEGORY_MANDARIN, "可惜不是你", "梁靜茹", "寫出那種明明很近卻再也回不去的距離。"),
+                _curated_song(2000, SONG_CATEGORY_MANDARIN, "成全", "劉若英", "把不捨推向成熟放手的層次。"),
+                _curated_song(1990, SONG_CATEGORY_MANDARIN, "味道", "辛曉琪", "讓思念變得更具畫面感，也更貼近舊情回憶。"),
+                _curated_song(1990, SONG_CATEGORY_MANDARIN, "聽海", "張惠妹", "把壓住的情緒打開，讓掛念有出口。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "慢冷", "梁靜茹", "延續那種後知後覺的難受與自省。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "小幸運", "田馥甄", "讓回憶帶點暖意，不至於全程下沉。"),
+                _curated_song(1970, SONG_CATEGORY_MANDARIN, "月亮代表我的心", "鄧麗君", "如果想將年代拉早，這首歌能把思念說得非常純粹。"),
             ),
         ),
         ThemePack(
@@ -593,14 +695,22 @@ def _build_theme_packs() -> list[ThemePack]:
             opening_lead="有些年份過咗去，但某一首歌一響，原來連空氣都會陪你回去。",
             closing_lead="回憶最動人嘅地方，唔係要你回頭，而係提醒你曾經好認真咁活過。",
             songs=(
-                SongSuggestion("追", "張國榮", "追 張國榮", "用一首經典把節目帶回最純粹的感情。"),
-                SongSuggestion("歲月如歌", "陳奕迅", "歲月如歌 陳奕迅", "讓聽眾進入時間慢慢流過的感覺。"),
-                SongSuggestion("最佳損友", "陳奕迅", "最佳損友 陳奕迅", "把青春裡那些失散的人也帶入節目。"),
-                SongSuggestion("一生中最愛", "譚詠麟", "一生中最愛 譚詠麟", "將懷舊情緒推到最濃。"),
-                SongSuggestion("後來", "劉若英", "後來 劉若英", "給那些多年後才懂自己的心事一個出口。"),
-                SongSuggestion("十年", "陳奕迅", "十年 陳奕迅", "最後再回到時間與關係的重量。"),
-                SongSuggestion("友情歲月", "鄭伊健", "友情歲月 鄭伊健", "把青春的畫面拉闊到更有電影感。"),
-                SongSuggestion("千千闋歌", "陳慧嫻", "千千闋歌 陳慧嫻", "用經典收束舊日時光的餘韻。"),
+                _curated_song(1990, SONG_CATEGORY_CANTONESE, "追", "張國榮", "用一首經典把節目帶回最純粹的感情。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "歲月如歌", "陳奕迅", "讓聽眾進入時間慢慢流過的感覺。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "最佳損友", "陳奕迅", "把青春裡那些失散的人也帶入節目。"),
+                _curated_song(1980, SONG_CATEGORY_CANTONESE, "千千闋歌", "陳慧嫻", "用經典收束舊日時光的餘韻。"),
+                _curated_song(1980, SONG_CATEGORY_CANTONESE, "一生何求", "陳百強", "將懷舊情緒推到最濃。"),
+                _curated_song(1990, SONG_CATEGORY_CANTONESE, "友情歲月", "鄭伊健", "把青春的畫面拉闊到更有電影感。"),
+                _curated_song(1970, SONG_CATEGORY_CANTONESE, "啼笑因緣", "仙杜拉", "如果想更舊派一點，這首歌可以立刻帶出老派電台感。"),
+                _curated_song(1980, SONG_CATEGORY_CANTONESE, "Monica", "張國榮", "加一點節奏感，讓懷舊不只停留在低回。"),
+                _curated_song(1970, SONG_CATEGORY_MANDARIN, "月亮代表我的心", "鄧麗君", "把回憶拉回最雋永、最直接的年代。"),
+                _curated_song(1980, SONG_CATEGORY_MANDARIN, "明天你是否依然愛我", "童安格", "把青春時代的掛念與不確定慢慢帶出來。"),
+                _curated_song(1990, SONG_CATEGORY_MANDARIN, "後來", "劉若英", "給那些多年後才懂自己的心事一個出口。"),
+                _curated_song(1990, SONG_CATEGORY_MANDARIN, "聽海", "張惠妹", "讓舊記憶變得更具海浪感同空間感。"),
+                _curated_song(2000, SONG_CATEGORY_MANDARIN, "十年", "陳奕迅", "最後再回到時間與關係的重量。"),
+                _curated_song(2000, SONG_CATEGORY_MANDARIN, "後來的我們", "五月天", "把回憶感延伸到成年之後的回望。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "小幸運", "田馥甄", "保留一點青春暖色，令整個懷舊旅程更完整。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "連名帶姓", "張惠妹", "讓回憶不只溫柔，也有刺痛與未完成感。"),
             ),
         ),
         ThemePack(
@@ -610,14 +720,22 @@ def _build_theme_packs() -> list[ThemePack]:
             opening_lead="如果你今日已經用盡力氣，依家就唔好再逼自己堅強，先慢慢抖一口氣。",
             closing_lead="希望你記住，溫柔唔係軟弱，而係明知辛苦仍然願意對自己好一點。",
             songs=(
-                SongSuggestion("陀飛輪", "陳奕迅", "陀飛輪 陳奕迅", "點出成年人最真實的時間焦慮。"),
-                SongSuggestion("高山低谷", "林奕匡", "高山低谷 林奕匡", "承接跌宕情緒，帶出慢慢抬頭的力量。"),
-                SongSuggestion("今天只做一件事", "陳奕迅", "今天只做一件事 陳奕迅", "提醒聽眾依家可以先只照顧一件事，就是自己。"),
-                SongSuggestion("下一站天后", "Twins", "下一站天后 Twins", "加一點明亮，令節目不只是低沉。"),
-                SongSuggestion("光年之外", "G.E.M.", "光年之外 G.E.M.", "把情緒轉成面向未來的想像。"),
-                SongSuggestion("海闊天空", "Beyond", "海闊天空 Beyond", "最後用最有力量的經典做收結。"),
-                SongSuggestion("小幸運", "田馥甄", "小幸運 田馥甄", "讓疲倦裡面仍然留住一點柔軟。"),
-                SongSuggestion("陪著你走", "盧冠廷", "陪著你走 盧冠廷", "最後補上一種被陪伴的安定感。"),
+                _curated_song(2010, SONG_CATEGORY_CANTONESE, "陀飛輪", "陳奕迅", "點出成年人最真實的時間焦慮。"),
+                _curated_song(2010, SONG_CATEGORY_CANTONESE, "高山低谷", "林奕匡", "承接跌宕情緒，帶出慢慢抬頭的力量。"),
+                _curated_song(2010, SONG_CATEGORY_CANTONESE, "今天只做一件事", "陳奕迅", "提醒聽眾依家可以先只照顧一件事，就是自己。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "下一站天后", "Twins", "加一點明亮，令節目不只是低沉。"),
+                _curated_song(1990, SONG_CATEGORY_CANTONESE, "海闊天空", "Beyond", "最後用最有力量的經典做收結。"),
+                _curated_song(1980, SONG_CATEGORY_CANTONESE, "陪著你走", "盧冠廷", "補上一種被陪伴的安定感。"),
+                _curated_song(1980, SONG_CATEGORY_CANTONESE, "偏偏喜歡你", "陳百強", "在療癒路線中留一點柔和懷舊感。"),
+                _curated_song(2000, SONG_CATEGORY_CANTONESE, "終身美麗", "鄭秀文", "把辛苦過後的自我接納慢慢講出來。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "光年之外", "G.E.M.", "把情緒轉成面向未來的想像。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "小幸運", "田馥甄", "讓疲倦裡面仍然留住一點柔軟。"),
+                _curated_song(2000, SONG_CATEGORY_MANDARIN, "勇氣", "梁靜茹", "提醒聽眾重新向前，需要的只是小小勇氣。"),
+                _curated_song(2000, SONG_CATEGORY_MANDARIN, "隱形的翅膀", "張韶涵", "給正在捱過低潮的人一點明亮的支撐。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "平凡之路", "朴樹", "讓節目慢慢走去比較開闊的結尾。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "演員", "薛之謙", "把壓力與關係中的消耗，換成一種看清自己的距離。"),
+                _curated_song(2000, SONG_CATEGORY_MANDARIN, "成全", "劉若英", "讓療癒路線保留成熟與放手的角度。"),
+                _curated_song(2010, SONG_CATEGORY_MANDARIN, "連名帶姓", "張惠妹", "即使療癒主題，也保留情緒並未完全散去的真實。"),
             ),
         ),
     ]
@@ -631,14 +749,20 @@ def _build_default_theme() -> ThemePack:
         opening_lead="唔知道你而家帶住咩心事入嚟，但我想先陪你慢慢坐低。",
         closing_lead="情緒總會慢慢有出口，但有人陪你行過，條路會冇咁難行。",
         songs=(
-            SongSuggestion("歲月如歌", "陳奕迅", "歲月如歌 陳奕迅", "用熟悉感先打開整個節目的氛圍。"),
-            SongSuggestion("K歌之王", "陳奕迅", "K歌之王 陳奕迅", "承接夜色裡那些有口難言的情緒。"),
-            SongSuggestion("追", "張國榮", "追 張國榮", "用經典撐起電台 DJ 的深夜質感。"),
-            SongSuggestion("高山低谷", "林奕匡", "高山低谷 林奕匡", "讓氣氛逐漸由低回轉向釋放。"),
-            SongSuggestion("今天只做一件事", "陳奕迅", "今天只做一件事 陳奕迅", "在後段加入溫柔安定感。"),
-            SongSuggestion("海闊天空", "Beyond", "海闊天空 Beyond", "最後用希望感作結。"),
-            SongSuggestion("一生中最愛", "譚詠麟", "一生中最愛 譚詠麟", "把節目尾段拉回成熟深夜電台的質感。"),
-            SongSuggestion("後來", "劉若英", "後來 劉若英", "留一點餘韻畀聽眾自己慢慢消化。"),
+            _curated_song(2000, SONG_CATEGORY_CANTONESE, "歲月如歌", "陳奕迅", "用熟悉感先打開整個節目的氛圍。"),
+            _curated_song(2000, SONG_CATEGORY_CANTONESE, "K歌之王", "陳奕迅", "承接夜色裡那些有口難言的情緒。"),
+            _curated_song(1990, SONG_CATEGORY_CANTONESE, "追", "張國榮", "用經典撐起電台 DJ 的陪伴質感。"),
+            _curated_song(2010, SONG_CATEGORY_CANTONESE, "高山低谷", "林奕匡", "讓氣氛逐漸由低回轉向釋放。"),
+            _curated_song(2010, SONG_CATEGORY_CANTONESE, "今天只做一件事", "陳奕迅", "在後段加入溫柔安定感。"),
+            _curated_song(1990, SONG_CATEGORY_CANTONESE, "海闊天空", "Beyond", "最後用希望感作結。"),
+            _curated_song(1980, SONG_CATEGORY_CANTONESE, "偏偏喜歡你", "陳百強", "把節目尾段拉回成熟電台的經典質感。"),
+            _curated_song(1970, SONG_CATEGORY_CANTONESE, "家變", "羅文", "如果想更舊派，這首歌可以立即拉出七十年代氣味。"),
+            _curated_song(2010, SONG_CATEGORY_MANDARIN, "小幸運", "田馥甄", "留一點柔軟餘韻畀聽眾自己慢慢消化。"),
+            _curated_song(2000, SONG_CATEGORY_MANDARIN, "十年", "陳奕迅", "用熟悉度高的作品承接情緒。"),
+            _curated_song(1990, SONG_CATEGORY_MANDARIN, "聽海", "張惠妹", "讓感受有更大的空間可以呼吸。"),
+            _curated_song(1980, SONG_CATEGORY_MANDARIN, "明天你是否依然愛我", "童安格", "用老派情歌留住陪伴感。"),
+            _curated_song(1970, SONG_CATEGORY_MANDARIN, "月亮代表我的心", "鄧麗君", "如果要更早年代，這首歌幾乎一響就有畫面。"),
+            _curated_song(2000, SONG_CATEGORY_MANDARIN, "勇氣", "梁靜茹", "在尾段補上一點向前走的力量。"),
         ),
     )
 
@@ -648,3 +772,96 @@ def _coerce_int(value: Any, field_name: str) -> int:
         return int(value)
     except (TypeError, ValueError) as exc:
         raise ValidationError(f"`{field_name}` must be an integer.") from exc
+
+
+def _normalize_song_category(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    aliases = {
+        "廣東歌": SONG_CATEGORY_CANTONESE,
+        "粤语歌": SONG_CATEGORY_CANTONESE,
+        "cantonese": SONG_CATEGORY_CANTONESE,
+        "cantopop": SONG_CATEGORY_CANTONESE,
+        "華語歌": SONG_CATEGORY_MANDARIN,
+        "华语歌": SONG_CATEGORY_MANDARIN,
+        "mandarin": SONG_CATEGORY_MANDARIN,
+        "mandopop": SONG_CATEGORY_MANDARIN,
+    }
+    resolved = aliases.get(normalized, normalized)
+    if resolved not in SUPPORTED_SONG_CATEGORIES:
+        raise ValidationError("`song_category` must be one of `cantonese` or `mandarin`.")
+    return resolved
+
+
+def _song_category_label(category: str) -> str:
+    if category == SONG_CATEGORY_MANDARIN:
+        return "華語歌"
+    return "廣東歌"
+
+
+def _era_label(era_start: int) -> str:
+    if era_start == MODERN_ERA_START:
+        return "現代"
+    decade = str(era_start)[-2:]
+    return f"{decade}年代"
+
+
+def _era_range_label(era_start: int, era_end: int) -> str:
+    if era_start == era_end:
+        return _era_label(era_start)
+    return f"{_era_label(era_start)}至{_era_label(era_end)}"
+
+
+def _curated_song(
+    era_start: int,
+    category: str,
+    title: str,
+    artist: str,
+    reason: str,
+) -> CuratedSong:
+    return CuratedSong(
+        era_start=era_start,
+        category=category,
+        suggestion=SongSuggestion(
+            titleHint=title,
+            artistHint=artist,
+            searchQuery=f"{title} {artist}",
+            reason=reason,
+        ),
+    )
+
+
+def _matches_preferences(song: CuratedSong, request: DJProgramRequest) -> bool:
+    return (
+        song.category == request.song_category
+        and request.era_range_start <= song.era_start <= request.era_range_end
+    )
+
+
+def _collect_catalog_songs(themes: tuple[ThemePack, ...]) -> tuple[CuratedSong, ...]:
+    ordered: list[CuratedSong] = []
+    seen: set[tuple[str, str]] = set()
+    for theme in themes:
+        for song in theme.songs:
+            key = (
+                song.suggestion.titleHint.casefold(),
+                song.suggestion.artistHint.casefold(),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            ordered.append(song)
+    return tuple(ordered)
+
+
+def _dedupe_song_suggestions(
+    suggestions: tuple[SongSuggestion, ...] | list[SongSuggestion],
+) -> list[SongSuggestion]:
+    ordered: list[SongSuggestion] = []
+    seen: set[tuple[str, str]] = set()
+    for song in suggestions:
+        key = (song.titleHint.casefold(), song.artistHint.casefold())
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(song)
+    return ordered

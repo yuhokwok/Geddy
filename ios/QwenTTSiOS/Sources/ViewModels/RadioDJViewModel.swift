@@ -3,6 +3,8 @@ import Foundation
 
 @MainActor
 final class RadioDJViewModel: ObservableObject {
+    static let desiredSongCount = 8
+
     @Published var serverURL: String
     @Published var transcriptText: String
     @Published var shouldCachePrograms: Bool {
@@ -21,6 +23,27 @@ final class RadioDJViewModel: ObservableObject {
             applySelectedVoicePreset()
         }
     }
+    @Published var selectedSongCategory: SongCategoryOption {
+        didSet {
+            defaults.set(selectedSongCategory.rawValue, forKey: DefaultsKey.selectedSongCategory)
+        }
+    }
+    @Published var selectedEraRangeStart: SongEraOption {
+        didSet {
+            if selectedEraRangeStart.rawValue > selectedEraRangeEnd.rawValue {
+                selectedEraRangeEnd = selectedEraRangeStart
+            }
+            defaults.set(selectedEraRangeStart.rawValue, forKey: DefaultsKey.selectedEraRangeStart)
+        }
+    }
+    @Published var selectedEraRangeEnd: SongEraOption {
+        didSet {
+            if selectedEraRangeEnd.rawValue < selectedEraRangeStart.rawValue {
+                selectedEraRangeStart = selectedEraRangeEnd
+            }
+            defaults.set(selectedEraRangeEnd.rawValue, forKey: DefaultsKey.selectedEraRangeEnd)
+        }
+    }
     @Published private(set) var availableLanguages: [String]
     @Published private(set) var availableVoicePresets: [VoicePreset]
     @Published private(set) var backendModelName: String
@@ -31,6 +54,8 @@ final class RadioDJViewModel: ObservableObject {
     @Published private(set) var isGeneratingRemainingSpeech = false
     @Published private(set) var isPlaying = false
     @Published private(set) var currentPlaybackItem: StationPlaybackItem?
+    @Published private(set) var currentPlaybackTime: TimeInterval = 0
+    @Published private(set) var currentPlaybackDuration: TimeInterval = 0
     @Published private(set) var statusMessage = "準備好之後，你可以錄音、編排節目，再一路聽住 intro、歌同獨白播出。"
     @Published var alertMessage: String?
 
@@ -70,6 +95,9 @@ final class RadioDJViewModel: ObservableObject {
         static let shouldCachePrograms = "ai.dj.shouldCachePrograms"
         static let selectedVoicePresetID = "ai.dj.selectedVoicePresetID"
         static let hostStyleDescription = "ai.dj.hostStyleDescription"
+        static let selectedSongCategory = "ai.dj.selectedSongCategory"
+        static let selectedEraRangeStart = "ai.dj.selectedEraRangeStart"
+        static let selectedEraRangeEnd = "ai.dj.selectedEraRangeEnd"
     }
 
     init(
@@ -99,6 +127,15 @@ final class RadioDJViewModel: ObservableObject {
         self.selectedVoicePresetID = savedPresetID
         let savedStyle = defaults.string(forKey: DefaultsKey.hostStyleDescription)
         self.hostStyleDescription = savedStyle ?? Self.voiceDescription(for: savedPresetID, in: VoicePreset.fallbackPresets)
+        self.selectedSongCategory = SongCategoryOption(
+            rawValue: defaults.string(forKey: DefaultsKey.selectedSongCategory) ?? SongCategoryOption.cantonese.rawValue
+        ) ?? .cantonese
+        self.selectedEraRangeStart = SongEraOption(
+            rawValue: defaults.integer(forKey: DefaultsKey.selectedEraRangeStart)
+        ) ?? .twoThousands
+        self.selectedEraRangeEnd = SongEraOption(
+            rawValue: defaults.integer(forKey: DefaultsKey.selectedEraRangeEnd)
+        ) ?? .modern
         self.availableLanguages = ["Chinese", "English"]
         self.backendModelName = "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16"
 
@@ -113,6 +150,20 @@ final class RadioDJViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] playing in
                 self?.isPlaying = playing
+            }
+            .store(in: &cancellables)
+
+        playbackCoordinator.$currentPlaybackTime
+            .receive(on: RunLoop.main)
+            .sink { [weak self] time in
+                self?.currentPlaybackTime = time
+            }
+            .store(in: &cancellables)
+
+        playbackCoordinator.$currentPlaybackDuration
+            .receive(on: RunLoop.main)
+            .sink { [weak self] duration in
+                self?.currentPlaybackDuration = duration
             }
             .store(in: &cancellables)
     }
@@ -170,9 +221,10 @@ final class RadioDJViewModel: ObservableObject {
                 ? cacheStore.signature(
                     transcript: trimmedTranscript,
                     hostStyleDescription: hostStyleDescription,
-                    desiredSongCount: 8,
+                    desiredSongCount: Self.desiredSongCount,
                     serverURL: serverURL,
-                    modelName: backendModelName
+                    modelName: backendModelName,
+                    songPreferences: songPreferences
                 )
                 : nil
 
@@ -291,13 +343,14 @@ final class RadioDJViewModel: ObservableObject {
         transcript: String,
         hostStyleDescription: String
     ) async throws -> SelectedDraftBundle {
+        let preferences = songPreferences
         do {
-            print("try backend program")
             let backendDraft = try await backendClient.fetchProgramDraft(
                 baseURLString: serverURL,
                 transcript: transcript,
                 hostStyle: hostStyleDescription,
-                desiredSongCount: 8
+                desiredSongCount: Self.desiredSongCount,
+                songPreferences: preferences
             )
             let songs = try await musicCatalogService.resolveSuggestions(backendDraft.songSuggestions)
             return SelectedDraftBundle(
@@ -306,12 +359,13 @@ final class RadioDJViewModel: ObservableObject {
                 source: .backend
             )
         } catch {
-            print("try fallback program")
             var lastError: Error = error
 
             for plannedDraft in await planner.fallbackDrafts(
                 from: transcript,
-                voiceDescription: hostStyleDescription
+                voiceDescription: hostStyleDescription,
+                desiredSongCount: Self.desiredSongCount,
+                songPreferences: preferences
             ) {
                 do {
                     let songs = try await musicCatalogService.resolveSuggestions(
@@ -676,8 +730,38 @@ final class RadioDJViewModel: ObservableObject {
         availableVoicePresets.first(where: { $0.id == selectedVoicePresetID })
     }
 
+    var songPreferences: ProgramSongPreferences {
+        ProgramSongPreferences(
+            songCategory: selectedSongCategory,
+            eraRangeStart: selectedEraRangeStart,
+            eraRangeEnd: selectedEraRangeEnd
+        )
+    }
+
+    var playbackProgress: Double {
+        guard currentPlaybackDuration > 0 else { return 0 }
+        return min(max(currentPlaybackTime / currentPlaybackDuration, 0), 1)
+    }
+
+    var playbackElapsedText: String {
+        Self.formatTime(currentPlaybackTime)
+    }
+
+    var playbackRemainingText: String {
+        guard currentPlaybackDuration > 0 else { return "--:--" }
+        return Self.formatTime(max(currentPlaybackDuration - currentPlaybackTime, 0))
+    }
+
     private static func voiceDescription(for presetID: String, in presets: [VoicePreset]) -> String {
         presets.first(where: { $0.id == presetID })?.voiceDescription
             ?? PrototypeShowPlanner.defaultVoiceDescription
+    }
+
+    private static func formatTime(_ time: TimeInterval) -> String {
+        guard time.isFinite, !time.isNaN else { return "--:--" }
+        let totalSeconds = max(Int(time.rounded(.down)), 0)
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }

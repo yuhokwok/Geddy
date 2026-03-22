@@ -53,7 +53,8 @@ struct DJBackendClient {
         baseURLString: String,
         transcript: String,
         hostStyle: String,
-        desiredSongCount: Int
+        desiredSongCount: Int,
+        songPreferences: ProgramSongPreferences
     ) async throws -> RadioShowDraft {
         let baseURL = try normalizedBaseURL(from: baseURLString)
         let endpoint = baseURL.appending(path: "api/v1/dj-program")
@@ -65,7 +66,10 @@ struct DJBackendClient {
             DJProgramRequestBody(
                 transcript: transcript,
                 hostStyle: hostStyle,
-                desiredSongCount: desiredSongCount
+                desiredSongCount: desiredSongCount,
+                songCategory: songPreferences.songCategory,
+                eraRangeStart: songPreferences.eraRangeStart.rawValue,
+                eraRangeEnd: songPreferences.eraRangeEnd.rawValue
             )
         )
 

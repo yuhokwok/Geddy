@@ -8,6 +8,7 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 generated_audio/
+qwen_tts/openrouter_api_key.json
 
 
 ## Obj-C/Swift specific

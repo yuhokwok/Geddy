@@ -28,7 +28,8 @@ final class DJProgramCacheStore {
         hostStyleDescription: String,
         desiredSongCount: Int,
         serverURL: String,
-        modelName: String
+        modelName: String,
+        songPreferences: ProgramSongPreferences
     ) -> String {
         let payload = [
             transcript.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -36,6 +37,9 @@ final class DJProgramCacheStore {
             String(desiredSongCount),
             serverURL.trimmingCharacters(in: .whitespacesAndNewlines),
             modelName.trimmingCharacters(in: .whitespacesAndNewlines),
+            songPreferences.songCategory.rawValue,
+            String(songPreferences.eraRangeStart.rawValue),
+            String(songPreferences.eraRangeEnd.rawValue),
         ].joined(separator: "\n---\n")
 
         let digest = SHA256.hash(data: Data(payload.utf8))

@@ -9,6 +9,8 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     @Published private(set) var currentItem: StationPlaybackItem?
     @Published private(set) var isPlaying = false
     @Published private(set) var currentIndex: Int = 0
+    @Published private(set) var currentPlaybackTime: TimeInterval = 0
+    @Published private(set) var currentPlaybackDuration: TimeInterval = 0
 
     private let musicPlayer = ApplicationMusicPlayer.shared
     private var speechPlayer: AVAudioPlayer?
@@ -19,12 +21,14 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     private var isAwaitingSongCompletion = false
     private var hasObservedActiveSongPlayback = false
     private var isUserPausingSong = false
+    private var progressTimerCancellable: AnyCancellable?
 
     override init() {
         super.init()
         configureAudioSession()
         observeMusicPlayerState()
         configureRemoteCommands()
+        startProgressUpdates()
     }
 
     func loadAndPlay(_ items: [StationPlaybackItem]) async throws {
@@ -43,16 +47,19 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
            let newIndex = playbackItems.firstIndex(where: { $0.queueKey == currentQueueKey }) {
             currentIndex = newIndex
             currentItem = playbackItems[newIndex]
+            refreshPlaybackProgress()
             return
         }
 
         if playbackItems.indices.contains(currentIndex) {
             currentItem = playbackItems[currentIndex]
+            refreshPlaybackProgress()
             return
         }
 
         currentIndex = min(currentIndex, max(playbackItems.count - 1, 0))
         currentItem = playbackItems[currentIndex]
+        refreshPlaybackProgress()
     }
 
     func playItem(withID itemID: StationPlaybackItem.ID) async throws {
@@ -70,10 +77,12 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
                 if speechPlayer.isPlaying {
                     speechPlayer.pause()
                     isPlaying = false
+                    refreshPlaybackProgress()
                 } else {
                     speechPlayer.play()
                     isPlaying = true
                     updateNowPlaying(for: currentItem)
+                    refreshPlaybackProgress()
                 }
             }
         case .song:
@@ -82,10 +91,12 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
                 isUserPausingSong = true
                 musicPlayer.pause()
                 isPlaying = false
+                refreshPlaybackProgress()
             default:
                 try? await musicPlayer.play()
                 isUserPausingSong = false
                 isPlaying = true
+                refreshPlaybackProgress()
             }
         }
     }
@@ -99,6 +110,8 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         isAwaitingSongCompletion = false
         hasObservedActiveSongPlayback = false
         isUserPausingSong = false
+        currentPlaybackTime = 0
+        currentPlaybackDuration = 0
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -129,6 +142,8 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
 
         let item = playbackItems[currentIndex]
         currentItem = item
+        currentPlaybackTime = 0
+        currentPlaybackDuration = item.durationSeconds
 
         switch item.payload {
         case .speech(let clip):
@@ -138,7 +153,9 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
             player.play()
             speechPlayer = player
             isPlaying = true
+            currentPlaybackDuration = player.duration > 0 ? player.duration : clip.response.durationSeconds
             updateNowPlaying(for: item)
+            refreshPlaybackProgress()
 
         case .song(let resolvedSong):
             let queue = ApplicationMusicPlayer.Queue(for: [resolvedSong.song])
@@ -149,7 +166,9 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
             isAwaitingSongCompletion = true
             hasObservedActiveSongPlayback = false
             isPlaying = true
+            currentPlaybackDuration = resolvedSong.song.duration ?? 0
             updateNowPlaying(for: item)
+            refreshPlaybackProgress()
         }
     }
 
@@ -213,6 +232,8 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         @unknown default:
             isPlaying = false
         }
+
+        refreshPlaybackProgress()
     }
 
     private func shouldAdvanceAfterSongCompletion(
@@ -287,11 +308,47 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         AppAudioSessionConfigurator.configureForAppLaunch()
     }
 
+    private func startProgressUpdates() {
+        progressTimerCancellable = Timer
+            .publish(every: 0.4, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                self?.refreshPlaybackProgress()
+            }
+    }
+
+    private func refreshPlaybackProgress() {
+        guard let currentItem else {
+            currentPlaybackTime = 0
+            currentPlaybackDuration = 0
+            return
+        }
+
+        switch currentItem.payload {
+        case .speech(let clip):
+            let duration = speechPlayer?.duration ?? clip.response.durationSeconds
+            currentPlaybackDuration = duration
+            currentPlaybackTime = min(speechPlayer?.currentTime ?? 0, max(duration, 0))
+        case .song(let resolvedSong):
+            currentPlaybackDuration = resolvedSong.song.duration ?? currentPlaybackDuration
+            currentPlaybackTime = min(currentMusicPlaybackTime(), max(currentPlaybackDuration, 0))
+        }
+
+        updateNowPlaying(for: currentItem)
+    }
+
+    private func currentMusicPlaybackTime() -> TimeInterval {
+        let playbackTime = musicPlayer.playbackTime
+        guard playbackTime.isFinite else { return 0 }
+        return max(playbackTime, 0)
+    }
+
     private func updateNowPlaying(for item: StationPlaybackItem) {
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: item.title,
             MPMediaItemPropertyArtist: item.subtitle,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyElapsedPlaybackTime: currentPlaybackTime
         ]
 
         switch item.payload {

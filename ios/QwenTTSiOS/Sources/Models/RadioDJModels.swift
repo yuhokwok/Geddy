@@ -1,6 +1,84 @@
 import Foundation
 import MusicKit
 
+enum SongCategoryOption: String, Codable, CaseIterable, Identifiable {
+    case cantonese
+    case mandarin
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .cantonese:
+            return "廣東歌"
+        case .mandarin:
+            return "華語歌"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .cantonese:
+            return "以廣東話流行曲為主"
+        case .mandarin:
+            return "以普通話流行曲為主"
+        }
+    }
+}
+
+enum SongEraOption: Int, Codable, CaseIterable, Identifiable {
+    case seventies = 1970
+    case eighties = 1980
+    case nineties = 1990
+    case twoThousands = 2000
+    case modern = 2010
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .seventies:
+            return "70年代"
+        case .eighties:
+            return "80年代"
+        case .nineties:
+            return "90年代"
+        case .twoThousands:
+            return "00年代"
+        case .modern:
+            return "現代"
+        }
+    }
+
+    var shortTitle: String {
+        switch self {
+        case .seventies:
+            return "70s"
+        case .eighties:
+            return "80s"
+        case .nineties:
+            return "90s"
+        case .twoThousands:
+            return "00s"
+        case .modern:
+            return "Now"
+        }
+    }
+}
+
+struct ProgramSongPreferences: Codable, Hashable {
+    let songCategory: SongCategoryOption
+    let eraRangeStart: SongEraOption
+    let eraRangeEnd: SongEraOption
+
+    var eraSummary: String {
+        if eraRangeStart == eraRangeEnd {
+            return eraRangeStart.title
+        }
+        return "\(eraRangeStart.title) - \(eraRangeEnd.title)"
+    }
+}
+
 struct VoicePreset: Decodable, Hashable, Identifiable {
     let id: String
     let label: String
@@ -130,11 +208,17 @@ struct DJProgramRequestBody: Codable {
     let transcript: String
     let hostStyle: String
     let desiredSongCount: Int
+    let songCategory: SongCategoryOption
+    let eraRangeStart: Int
+    let eraRangeEnd: Int
 
     enum CodingKeys: String, CodingKey {
         case transcript
         case hostStyle = "host_style"
         case desiredSongCount = "desired_song_count"
+        case songCategory = "song_category"
+        case eraRangeStart = "era_range_start"
+        case eraRangeEnd = "era_range_end"
     }
 }
 
@@ -348,6 +432,15 @@ struct StationPlaybackItem: Identifiable, Hashable {
     var bridgeText: String? {
         guard kind == .bridge else { return nil }
         return spokenClip?.text
+    }
+
+    var durationSeconds: Double {
+        switch payload {
+        case .speech(let clip):
+            return clip.response.durationSeconds
+        case .song(let song):
+            return song.song.duration ?? 0
+        }
     }
 }
 
