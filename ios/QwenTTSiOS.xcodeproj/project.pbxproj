@@ -1,0 +1,379 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		25D273E5470C4B10D08EF5BA /* QwenTTSiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B95C054943A1B0C66FA738C /* QwenTTSiOSApp.swift */; };
+		38B3138302D5DFC8D647B018 /* AppleMusicCatalogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4EACBEBF8C87CF963760FA0 /* AppleMusicCatalogService.swift */; };
+		410BCB1BD0791847DC38A38F /* StationPlaybackCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3EC43F2CCEFC926C6C1440A /* StationPlaybackCoordinator.swift */; };
+		4C68892574F29DE00B8267FE /* DJProgramCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24282D140E7C5838D539EB1A /* DJProgramCacheStore.swift */; };
+		A27F321303AD532F60D8C9DA /* AppAudioSessionConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 458F4082BD3894614F24465A /* AppAudioSessionConfigurator.swift */; };
+		A3A694DF6A378BF602078D5D /* SpeechCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDBDD94B56853165B0C22A71 /* SpeechCaptureService.swift */; };
+		A8610867877EF87B78D554B6 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D170E36E8993429BD7EB5B3 /* ContentView.swift */; };
+		C5FAFE4437D83C8A8401284F /* DJBackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20BCB7743F954EAF8A7486B4 /* DJBackendClient.swift */; };
+		E06E69C003152F2F6C87EC20 /* RadioDJViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63D7F67A1C23B4546D3F089 /* RadioDJViewModel.swift */; };
+		E811EDDD95138C431083C513 /* PrototypeShowPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A399BC0C9932B7BDD631F955 /* PrototypeShowPlanner.swift */; };
+		EF1D9BAA78F4EBB38A0F1EAD /* RadioDJModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE574C5396FD76B940E2620D /* RadioDJModels.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0D170E36E8993429BD7EB5B3 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		1681757616BC568B45F743F7 /* AIZhengZiSeng.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AIZhengZiSeng.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		20BCB7743F954EAF8A7486B4 /* DJBackendClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DJBackendClient.swift; sourceTree = "<group>"; };
+		24282D140E7C5838D539EB1A /* DJProgramCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DJProgramCacheStore.swift; sourceTree = "<group>"; };
+		458F4082BD3894614F24465A /* AppAudioSessionConfigurator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAudioSessionConfigurator.swift; sourceTree = "<group>"; };
+		6B95C054943A1B0C66FA738C /* QwenTTSiOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenTTSiOSApp.swift; sourceTree = "<group>"; };
+		A399BC0C9932B7BDD631F955 /* PrototypeShowPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrototypeShowPlanner.swift; sourceTree = "<group>"; };
+		AE574C5396FD76B940E2620D /* RadioDJModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioDJModels.swift; sourceTree = "<group>"; };
+		B3EC43F2CCEFC926C6C1440A /* StationPlaybackCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPlaybackCoordinator.swift; sourceTree = "<group>"; };
+		CDBDD94B56853165B0C22A71 /* SpeechCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechCaptureService.swift; sourceTree = "<group>"; };
+		D63D7F67A1C23B4546D3F089 /* RadioDJViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioDJViewModel.swift; sourceTree = "<group>"; };
+		F4EACBEBF8C87CF963760FA0 /* AppleMusicCatalogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicCatalogService.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		062044B868E30FE027687269 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AE574C5396FD76B940E2620D /* RadioDJModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		0F9951BE39F5431055556766 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				D63D7F67A1C23B4546D3F089 /* RadioDJViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		13A5F4FC180D480C920A26B1 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				6B95C054943A1B0C66FA738C /* QwenTTSiOSApp.swift */,
+				062044B868E30FE027687269 /* Models */,
+				37A0491922A900BE0A45033D /* Networking */,
+				412C6FB23FCF67B4A5E13738 /* Services */,
+				0F9951BE39F5431055556766 /* ViewModels */,
+				8BF560D55A8B86B6A665AC79 /* Views */,
+			);
+			name = Sources;
+			path = QwenTTSiOS/Sources;
+			sourceTree = "<group>";
+		};
+		32D7EBA87DF499F318995F5F = {
+			isa = PBXGroup;
+			children = (
+				13A5F4FC180D480C920A26B1 /* Sources */,
+				FA4307E649D64F565DDEEA37 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		37A0491922A900BE0A45033D /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				20BCB7743F954EAF8A7486B4 /* DJBackendClient.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		412C6FB23FCF67B4A5E13738 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				458F4082BD3894614F24465A /* AppAudioSessionConfigurator.swift */,
+				F4EACBEBF8C87CF963760FA0 /* AppleMusicCatalogService.swift */,
+				24282D140E7C5838D539EB1A /* DJProgramCacheStore.swift */,
+				A399BC0C9932B7BDD631F955 /* PrototypeShowPlanner.swift */,
+				CDBDD94B56853165B0C22A71 /* SpeechCaptureService.swift */,
+				B3EC43F2CCEFC926C6C1440A /* StationPlaybackCoordinator.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		8BF560D55A8B86B6A665AC79 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				0D170E36E8993429BD7EB5B3 /* ContentView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		FA4307E649D64F565DDEEA37 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1681757616BC568B45F743F7 /* AIZhengZiSeng.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9670A1E52FE88694024DBCB7 /* QwenTTSiOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5C7733112B9EED5A9820AF5B /* Build configuration list for PBXNativeTarget "QwenTTSiOS" */;
+			buildPhases = (
+				4286D02C5217BA4C1063E3EE /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = QwenTTSiOS;
+			packageProductDependencies = (
+			);
+			productName = QwenTTSiOS;
+			productReference = 1681757616BC568B45F743F7 /* AIZhengZiSeng.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AB43EB2832F9EB60BF39ECA4 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = 4AE1F06CF21EF6A058F486AE /* Build configuration list for PBXProject "QwenTTSiOS" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 32D7EBA87DF499F318995F5F;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = FA4307E649D64F565DDEEA37 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9670A1E52FE88694024DBCB7 /* QwenTTSiOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4286D02C5217BA4C1063E3EE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A27F321303AD532F60D8C9DA /* AppAudioSessionConfigurator.swift in Sources */,
+				38B3138302D5DFC8D647B018 /* AppleMusicCatalogService.swift in Sources */,
+				A8610867877EF87B78D554B6 /* ContentView.swift in Sources */,
+				C5FAFE4437D83C8A8401284F /* DJBackendClient.swift in Sources */,
+				4C68892574F29DE00B8267FE /* DJProgramCacheStore.swift in Sources */,
+				E811EDDD95138C431083C513 /* PrototypeShowPlanner.swift in Sources */,
+				25D273E5470C4B10D08EF5BA /* QwenTTSiOSApp.swift in Sources */,
+				EF1D9BAA78F4EBB38A0F1EAD /* RadioDJModels.swift in Sources */,
+				E06E69C003152F2F6C87EC20 /* RadioDJViewModel.swift in Sources */,
+				A3A694DF6A378BF602078D5D /* SpeechCaptureService.swift in Sources */,
+				410BCB1BD0791847DC38A38F /* StationPlaybackCoordinator.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		1EFABE178CC596999B97385C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G747L87TGJ;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = QwenTTSiOS/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kwokyuho.aizhengziseng;
+				PRODUCT_NAME = AIZhengZiSeng;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		39A661A06BDFF9AB9B23637E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		50A1EE0932FA862BD7FCA229 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G747L87TGJ;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = QwenTTSiOS/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kwokyuho.aizhengziseng;
+				PRODUCT_NAME = AIZhengZiSeng;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D127E9943B67787F7206242A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4AE1F06CF21EF6A058F486AE /* Build configuration list for PBXProject "QwenTTSiOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D127E9943B67787F7206242A /* Debug */,
+				39A661A06BDFF9AB9B23637E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5C7733112B9EED5A9820AF5B /* Build configuration list for PBXNativeTarget "QwenTTSiOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				50A1EE0932FA862BD7FCA229 /* Debug */,
+				1EFABE178CC596999B97385C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AB43EB2832F9EB60BF39ECA4 /* Project object */;
+}

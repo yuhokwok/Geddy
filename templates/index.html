@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Qwen Voice Studio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Qwen3 VoiceDesign Backend</p>
+        <h1>Design a voice in words, then turn it into speech.</h1>
+        <p class="lede">
+          This server wraps <code>{{ model_id }}</code> behind a web form and a JSON API.
+          The same endpoint can power a browser UI or an iOS app.
+        </p>
+        <div class="hero-card">
+          <p class="hero-label">Model</p>
+          <code>{{ model_id }}</code>
+        </div>
+      </section>
+
+      <section class="panel form-panel">
+        <div class="panel-head">
+          <h2>DJ Program Interview</h2>
+          <p>Generate a full radio rundown, then inspect the opening, songs, bridges, and closing before sending it to iOS for Apple Music lookup and playback.</p>
+        </div>
+
+        <form id="program-form">
+          <label>
+            <span>Listener transcript / theme</span>
+            <textarea
+              name="transcript"
+              rows="5"
+              placeholder="例如：今晚有啲掛住以前拍拖嗰陣，明知唔應該回頭，但仲係會諗起對方。"
+              required
+            >今晚有啲掛住以前拍拖嗰陣，明知唔應該回頭，但仲係會諗起對方。</textarea>
+          </label>
+
+          <div class="grid two">
+            <label>
+              <span>Voice preset</span>
+              <select name="voice_preset" id="program-voice-preset">
+                {% for preset in voice_presets %}
+                <option value="{{ preset.id }}" {% if preset.id == "ai_zhengziseng" %}selected{% endif %}>{{ preset.label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <label>
+              <span>Song count</span>
+              <input type="number" name="desired_song_count" min="5" max="8" step="1" value="6">
+            </label>
+          </div>
+
+          <label>
+            <span>Host style</span>
+            <textarea
+              name="host_style"
+              id="program-host-style"
+              rows="4"
+              placeholder="Describe the DJ voice and mood for the program."
+              required
+            ></textarea>
+            <small class="field-note">呢度會跟住揀咗嘅人聲 preset 自動帶入，方便你檢查 OpenRouter 生成出嚟嘅節目內容。Apple Music 搜歌會留返俾 iOS 做。</small>
+          </label>
+
+          <div class="actions">
+            <button type="submit" id="program-submit-button">Generate DJ program</button>
+            <p id="program-status" class="status">Ready to review.</p>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel result-panel">
+        <div class="panel-head">
+          <h2>Program Review</h2>
+          <p>Use this interview-style review to check whether the generated content feels right before producing audio. Song rows only contain hints and iOS search queries.</p>
+        </div>
+
+        <div id="program-result" class="result empty">
+          <p>No DJ program yet.</p>
+        </div>
+      </section>
+
+      <section class="panel form-panel">
+        <div class="panel-head">
+          <h2>Create a clip</h2>
+          <p>Describe the target voice, choose a language, and synthesize a WAV file.</p>
+        </div>
+
+        <form id="tts-form">
+          <label>
+            <span>Voice preset</span>
+            <select name="voice_preset" id="voice-preset">
+              {% for preset in voice_presets %}
+              <option value="{{ preset.id }}" {% if preset.id == "ai_zhengziseng" %}selected{% endif %}>{{ preset.label }}</option>
+              {% endfor %}
+            </select>
+            <small class="field-note">揀一把人聲，下面嘅 voice description 會自動帶入，你都可以再微調。</small>
+          </label>
+
+          <label>
+            <span>Text</span>
+            <textarea
+              name="text"
+              rows="6"
+              placeholder="Write the script you want spoken."
+              required
+            >Welcome back. Your custom Qwen voice backend is ready.</textarea>
+          </label>
+
+          <label>
+            <span>Voice description</span>
+            <textarea
+              name="voice_description"
+              rows="4"
+              placeholder="A calm, warm female voice with a polished studio tone and clear diction."
+              required
+            >A calm, confident narrator with a warm tone, crisp diction, and a modern studio feel.</textarea>
+          </label>
+
+          <div class="grid two">
+            <label>
+              <span>Language</span>
+              <select name="language">
+                {% for language in languages %}
+                <option value="{{ language }}" {% if language == "English" %}selected{% endif %}>{{ language }}</option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <label>
+              <span>Temperature</span>
+              <input type="number" name="temperature" min="0" max="2" step="0.1" value="0.7">
+            </label>
+          </div>
+
+          <div class="grid three">
+            <label>
+              <span>Max tokens</span>
+              <input type="number" name="max_tokens" min="64" max="4096" step="1" value="2048">
+            </label>
+
+            <label>
+              <span>Top K</span>
+              <input type="number" name="top_k" min="0" max="200" step="1" value="50">
+            </label>
+
+            <label>
+              <span>Top P</span>
+              <input type="number" name="top_p" min="0.1" max="1" step="0.05" value="1.0">
+            </label>
+          </div>
+
+          <label>
+            <span>Repetition penalty</span>
+            <input type="number" name="repetition_penalty" min="1" max="2" step="0.01" value="1.05">
+          </label>
+
+          <div class="actions">
+            <button type="submit" id="submit-button">Generate voice</button>
+            <p id="status" class="status">Ready.</p>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel result-panel">
+        <div class="panel-head">
+          <h2>Latest result</h2>
+          <p>Once synthesis finishes, the audio player and API payload show up here.</p>
+        </div>
+
+        <div id="result" class="result empty">
+          <p>No audio yet.</p>
+        </div>
+      </section>
+
+      <section class="panel api-panel">
+        <div class="panel-head">
+          <h2>iOS-friendly API</h2>
+          <p>POST JSON to the same backend and receive a clip URL plus metadata.</p>
+        </div>
+
+        <pre><code>POST /api/v1/speech
+Content-Type: application/json
+
+{
+  "text": "Welcome to the app.",
+  "voice_description": "A bright, trustworthy product guide with clear diction.",
+  "language": "English",
+  "temperature": 0.7,
+  "max_tokens": 2048
+}</code></pre>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById("tts-form");
+      const result = document.getElementById("result");
+      const statusNode = document.getElementById("status");
+      const submitButton = document.getElementById("submit-button");
+      const voicePresetSelect = document.getElementById("voice-preset");
+      const voiceDescriptionField = form.elements.voice_description;
+      const programForm = document.getElementById("program-form");
+      const programResult = document.getElementById("program-result");
+      const programStatusNode = document.getElementById("program-status");
+      const programSubmitButton = document.getElementById("program-submit-button");
+      const programVoicePresetSelect = document.getElementById("program-voice-preset");
+      const programHostStyleField = document.getElementById("program-host-style");
+      const voicePresets = {{ voice_presets|tojson }};
+      const storageKey = "qwen-voice-studio-form-v2";
+      const programStorageKey = "qwen-dj-program-form-v1";
+
+      function applyPreset(presetId, targetField) {
+        const preset = voicePresets.find((item) => item.id === presetId);
+        if (!preset) return;
+        targetField.value = preset.description;
+      }
+
+      function saveFormState() {
+        const payload = Object.fromEntries(new FormData(form).entries());
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
+      }
+
+      function restoreFormState() {
+        const raw = window.localStorage.getItem(storageKey);
+        if (!raw) {
+          applyPreset(voicePresetSelect.value, voiceDescriptionField);
+          return;
+        }
+
+        try {
+          const saved = JSON.parse(raw);
+          for (const [key, value] of Object.entries(saved)) {
+            const field = form.elements.namedItem(key);
+            if (field && typeof field.value !== "undefined") {
+              field.value = value;
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to restore saved form state", error);
+        }
+      }
+
+      function saveProgramFormState() {
+        const payload = Object.fromEntries(new FormData(programForm).entries());
+        window.localStorage.setItem(programStorageKey, JSON.stringify(payload));
+      }
+
+      function restoreProgramFormState() {
+        const raw = window.localStorage.getItem(programStorageKey);
+        if (!raw) {
+          applyPreset(programVoicePresetSelect.value, programHostStyleField);
+          return;
+        }
+
+        try {
+          const saved = JSON.parse(raw);
+          for (const [key, value] of Object.entries(saved)) {
+            const field = programForm.elements.namedItem(key);
+            if (field && typeof field.value !== "undefined") {
+              field.value = value;
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to restore saved DJ program state", error);
+        }
+      }
+
+      function renderProgramResult(data) {
+        const songs = data.songSuggestions.map((song, index) => `
+          <article class="review-card">
+            <p class="review-index">Song ${index + 1}</p>
+            <p><strong>${song.titleHint}</strong> · ${song.artistHint}</p>
+            <p><strong>iOS Search Query:</strong> ${song.searchQuery}</p>
+            <textarea rows="3">${song.reason}</textarea>
+          </article>
+        `).join("");
+
+        const bridges = data.bridgeMonologues.map((bridge, index) => `
+          <article class="review-card">
+            <p class="review-index">Bridge ${index + 1}</p>
+            <p><strong>After song:</strong> ${bridge.afterSongIndex + 1}</p>
+            <textarea rows="4">${bridge.text}</textarea>
+          </article>
+        `).join("");
+
+        programResult.classList.remove("empty");
+        programResult.innerHTML = `
+          <div class="program-summary">
+            <p class="review-index">Show title</p>
+            <h3>${data.showTitle}</h3>
+            <p>${data.moodSummary}</p>
+          </div>
+          <article class="review-card">
+            <p class="review-index">Opening</p>
+            <textarea rows="6">${data.openingMonologue}</textarea>
+          </article>
+          <div class="review-grid">
+            ${songs}
+          </div>
+          <div class="review-grid">
+            ${bridges}
+          </div>
+          <article class="review-card">
+            <p class="review-index">Closing</p>
+            <textarea rows="5">${data.closingMonologue}</textarea>
+          </article>
+          <article class="review-card">
+            <p class="review-index">Voice description</p>
+            <textarea rows="4">${data.voiceDescription}</textarea>
+          </article>
+          <details class="raw-json">
+            <summary>Raw JSON</summary>
+            <pre><code>${JSON.stringify(data, null, 2)}</code></pre>
+          </details>
+        `;
+      }
+
+      restoreFormState();
+      restoreProgramFormState();
+
+      voicePresetSelect.addEventListener("change", () => {
+        applyPreset(voicePresetSelect.value, voiceDescriptionField);
+        saveFormState();
+      });
+
+      programVoicePresetSelect.addEventListener("change", () => {
+        applyPreset(programVoicePresetSelect.value, programHostStyleField);
+        saveProgramFormState();
+      });
+
+      form.querySelectorAll("input, textarea, select").forEach((field) => {
+        field.addEventListener("input", saveFormState);
+        field.addEventListener("change", saveFormState);
+      });
+
+      programForm.querySelectorAll("input, textarea, select").forEach((field) => {
+        field.addEventListener("input", saveProgramFormState);
+        field.addEventListener("change", saveProgramFormState);
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submitButton.disabled = true;
+        statusNode.textContent = "Generating audio. The first request may take a while while the model loads.";
+
+        const payload = Object.fromEntries(new FormData(form).entries());
+        delete payload.voice_preset;
+        saveFormState();
+
+        try {
+          const response = await fetch("/api/v1/speech", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "Synthesis failed.");
+          }
+
+          result.classList.remove("empty");
+          result.innerHTML = `
+            <audio controls src="${data.audio_url}"></audio>
+            <div class="meta">
+              <p><strong>Clip ID:</strong> ${data.id}</p>
+              <p><strong>Duration:</strong> ${data.duration_seconds}s</p>
+              <p><strong>Sample rate:</strong> ${data.sample_rate} Hz</p>
+              <p><a href="${data.download_url}">Download WAV</a></p>
+            </div>
+            <pre><code>${JSON.stringify(data, null, 2)}</code></pre>
+          `;
+          statusNode.textContent = "Audio generated successfully.";
+        } catch (error) {
+          result.classList.add("empty");
+          result.innerHTML = `<p>${error.message}</p>`;
+          statusNode.textContent = "Request failed.";
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+
+      programForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        programSubmitButton.disabled = true;
+        programStatusNode.textContent = "Generating DJ program content. Apple Music search stays on iOS.";
+        saveProgramFormState();
+
+        const payload = Object.fromEntries(new FormData(programForm).entries());
+        delete payload.voice_preset;
+
+        try {
+          const response = await fetch("/api/v1/dj-program", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || "DJ program generation failed.");
+          }
+
+          renderProgramResult(data);
+          programStatusNode.textContent = "DJ program generated. Review each section below; Apple Music lookup will happen in iOS.";
+        } catch (error) {
+          programResult.classList.add("empty");
+          programResult.innerHTML = `<p>${error.message}</p>`;
+          programStatusNode.textContent = "Request failed.";
+        } finally {
+          programSubmitButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

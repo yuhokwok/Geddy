@@ -1,0 +1,4 @@
+Flask>=3.0
+mlx-audio>=0.4.1
+numpy>=1.26
+soundfile>=0.13

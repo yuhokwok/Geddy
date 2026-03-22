@@ -4,6 +4,11 @@
 
 ## User settings
 xcuserdata/
+__pycache__/
+.pytest_cache/
+.DS_Store
+generated_audio/
+
 
 ## Obj-C/Swift specific
 *.hmap
