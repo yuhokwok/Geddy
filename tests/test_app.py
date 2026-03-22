@@ -122,13 +122,13 @@ class AppTestCase(unittest.TestCase):
                 "desired_song_count": 6,
                 "song_category": "廣東歌",
                 "era_range_start": 1980,
-                "era_range_end": 2000,
+                "era_range_end": 2020,
             }
         )
 
         self.assertEqual(request.song_category, "cantonese")
         self.assertEqual(request.era_range_start, 1980)
-        self.assertEqual(request.era_range_end, 2000)
+        self.assertEqual(request.era_range_end, 2020)
 
     def test_program_request_rejects_invalid_era_range(self):
         with self.assertRaisesRegex(ValueError, "less than or equal"):

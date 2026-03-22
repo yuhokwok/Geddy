@@ -31,7 +31,8 @@ enum SongEraOption: Int, Codable, CaseIterable, Identifiable {
     case eighties = 1980
     case nineties = 1990
     case twoThousands = 2000
-    case modern = 2010
+    case twoTens = 2010
+    case modern = 2020
 
     var id: Int { rawValue }
 
@@ -45,6 +46,8 @@ enum SongEraOption: Int, Codable, CaseIterable, Identifiable {
             return "90年代"
         case .twoThousands:
             return "00年代"
+        case .twoTens:
+            return "10年代"
         case .modern:
             return "現代"
         }
@@ -60,6 +63,8 @@ enum SongEraOption: Int, Codable, CaseIterable, Identifiable {
             return "90s"
         case .twoThousands:
             return "00s"
+        case .twoTens:
+            return "10s"
         case .modern:
             return "Now"
         }

@@ -127,15 +127,22 @@ final class RadioDJViewModel: ObservableObject {
         self.selectedVoicePresetID = savedPresetID
         let savedStyle = defaults.string(forKey: DefaultsKey.hostStyleDescription)
         self.hostStyleDescription = savedStyle ?? Self.voiceDescription(for: savedPresetID, in: VoicePreset.fallbackPresets)
-        self.selectedSongCategory = SongCategoryOption(
+        let initialSongCategory = SongCategoryOption(
             rawValue: defaults.string(forKey: DefaultsKey.selectedSongCategory) ?? SongCategoryOption.cantonese.rawValue
         ) ?? .cantonese
-        self.selectedEraRangeStart = SongEraOption(
+        let initialEraRangeStart = SongEraOption(
             rawValue: defaults.integer(forKey: DefaultsKey.selectedEraRangeStart)
         ) ?? .twoThousands
-        self.selectedEraRangeEnd = SongEraOption(
+        let rawEraRangeEnd = SongEraOption(
             rawValue: defaults.integer(forKey: DefaultsKey.selectedEraRangeEnd)
         ) ?? .modern
+        let initialEraRangeEnd = rawEraRangeEnd.rawValue < initialEraRangeStart.rawValue
+            ? initialEraRangeStart
+            : rawEraRangeEnd
+
+        self.selectedSongCategory = initialSongCategory
+        self.selectedEraRangeStart = initialEraRangeStart
+        self.selectedEraRangeEnd = initialEraRangeEnd
         self.availableLanguages = ["Chinese", "English"]
         self.backendModelName = "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16"
 

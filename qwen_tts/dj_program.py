@@ -28,8 +28,8 @@ SUPPORTED_SONG_CATEGORIES = {
     SONG_CATEGORY_CANTONESE,
     SONG_CATEGORY_MANDARIN,
 }
-SUPPORTED_ERA_STARTS = (1970, 1980, 1990, 2000, 2010)
-MODERN_ERA_START = 2010
+SUPPORTED_ERA_STARTS = (1970, 1980, 1990, 2000, 2010, 2020)
+MODERN_ERA_START = 2020
 
 
 class DJProgramPlanning(Protocol):
@@ -129,11 +129,11 @@ class DJProgramRequest:
             raise ValidationError("`desired_song_count` must be between 5 and 8.")
         if era_range_start not in SUPPORTED_ERA_STARTS:
             raise ValidationError(
-                "`era_range_start` must be one of 1970, 1980, 1990, 2000, or 2010."
+                "`era_range_start` must be one of 1970, 1980, 1990, 2000, 2010, or 2020."
             )
         if era_range_end not in SUPPORTED_ERA_STARTS:
             raise ValidationError(
-                "`era_range_end` must be one of 1970, 1980, 1990, 2000, or 2010."
+                "`era_range_end` must be one of 1970, 1980, 1990, 2000, 2010, or 2020."
             )
         if era_range_start > era_range_end:
             raise ValidationError("`era_range_start` must be less than or equal to `era_range_end`.")
@@ -678,6 +678,8 @@ def _build_theme_packs() -> list[ThemePack]:
                 _curated_song(1990, SONG_CATEGORY_CANTONESE, "追", "張國榮", "用偏向懷念的角度，放大掛住一個人的失重感。"),
                 _curated_song(1980, SONG_CATEGORY_CANTONESE, "一生何求", "陳百強", "將舊情未放低的重量拉回經典年代。"),
                 _curated_song(2010, SONG_CATEGORY_CANTONESE, "高山低谷", "林奕匡", "讓情緒由失落慢慢行到面對自己。"),
+                _curated_song(2020, SONG_CATEGORY_CANTONESE, "銀河修理員", "Dear Jane", "用近年的傷感口吻，把思念寫得更貼近而家呢一代。"),
+                _curated_song(2020, SONG_CATEGORY_CANTONESE, "到底發生過什麼事", "Dear Jane", "將未放低同自我追問推到更近代的情緒語境。"),
                 _curated_song(2000, SONG_CATEGORY_MANDARIN, "十年", "陳奕迅", "把熟悉的遺憾感轉成更直接的華語流行情緒。"),
                 _curated_song(2000, SONG_CATEGORY_MANDARIN, "可惜不是你", "梁靜茹", "寫出那種明明很近卻再也回不去的距離。"),
                 _curated_song(2000, SONG_CATEGORY_MANDARIN, "成全", "劉若英", "把不捨推向成熟放手的層次。"),
@@ -685,6 +687,8 @@ def _build_theme_packs() -> list[ThemePack]:
                 _curated_song(1990, SONG_CATEGORY_MANDARIN, "聽海", "張惠妹", "把壓住的情緒打開，讓掛念有出口。"),
                 _curated_song(2010, SONG_CATEGORY_MANDARIN, "慢冷", "梁靜茹", "延續那種後知後覺的難受與自省。"),
                 _curated_song(2010, SONG_CATEGORY_MANDARIN, "小幸運", "田馥甄", "讓回憶帶點暖意，不至於全程下沉。"),
+                _curated_song(2020, SONG_CATEGORY_MANDARIN, "刻在我心底的名字", "盧廣仲", "用近代華語情歌講出仍然放唔低的名字。"),
+                _curated_song(2020, SONG_CATEGORY_MANDARIN, "如果可以", "韋禮安", "將掛念寫成一種想回頭改寫結果的心情。"),
                 _curated_song(1970, SONG_CATEGORY_MANDARIN, "月亮代表我的心", "鄧麗君", "如果想將年代拉早，這首歌能把思念說得非常純粹。"),
             ),
         ),
@@ -711,6 +715,10 @@ def _build_theme_packs() -> list[ThemePack]:
                 _curated_song(2000, SONG_CATEGORY_MANDARIN, "後來的我們", "五月天", "把回憶感延伸到成年之後的回望。"),
                 _curated_song(2010, SONG_CATEGORY_MANDARIN, "小幸運", "田馥甄", "保留一點青春暖色，令整個懷舊旅程更完整。"),
                 _curated_song(2010, SONG_CATEGORY_MANDARIN, "連名帶姓", "張惠妹", "讓回憶不只溫柔，也有刺痛與未完成感。"),
+                _curated_song(2020, SONG_CATEGORY_CANTONESE, "銀河修理員", "Dear Jane", "即使講懷舊，都可以加一點近年的柔軟同空白感。"),
+                _curated_song(2020, SONG_CATEGORY_CANTONESE, "留一天與你喘息", "陳卓賢", "把回憶拉入更現代的都市情緒。"),
+                _curated_song(2020, SONG_CATEGORY_MANDARIN, "刻在我心底的名字", "盧廣仲", "把舊日時光轉成近年最有畫面的青春回望。"),
+                _curated_song(2020, SONG_CATEGORY_MANDARIN, "如果可以", "韋禮安", "近年的回憶系情歌，保留想改寫過去的遺憾感。"),
             ),
         ),
         ThemePack(
@@ -728,6 +736,8 @@ def _build_theme_packs() -> list[ThemePack]:
                 _curated_song(1980, SONG_CATEGORY_CANTONESE, "陪著你走", "盧冠廷", "補上一種被陪伴的安定感。"),
                 _curated_song(1980, SONG_CATEGORY_CANTONESE, "偏偏喜歡你", "陳百強", "在療癒路線中留一點柔和懷舊感。"),
                 _curated_song(2000, SONG_CATEGORY_CANTONESE, "終身美麗", "鄭秀文", "把辛苦過後的自我接納慢慢講出來。"),
+                _curated_song(2020, SONG_CATEGORY_CANTONESE, "留一天與你喘息", "陳卓賢", "用較新的城市感陪伴，讓人感覺有人同你一齊抖氣。"),
+                _curated_song(2020, SONG_CATEGORY_CANTONESE, "銀河修理員", "Dear Jane", "令療癒感帶少少近代樂隊的遼闊感。"),
                 _curated_song(2010, SONG_CATEGORY_MANDARIN, "光年之外", "G.E.M.", "把情緒轉成面向未來的想像。"),
                 _curated_song(2010, SONG_CATEGORY_MANDARIN, "小幸運", "田馥甄", "讓疲倦裡面仍然留住一點柔軟。"),
                 _curated_song(2000, SONG_CATEGORY_MANDARIN, "勇氣", "梁靜茹", "提醒聽眾重新向前，需要的只是小小勇氣。"),
@@ -736,6 +746,8 @@ def _build_theme_packs() -> list[ThemePack]:
                 _curated_song(2010, SONG_CATEGORY_MANDARIN, "演員", "薛之謙", "把壓力與關係中的消耗，換成一種看清自己的距離。"),
                 _curated_song(2000, SONG_CATEGORY_MANDARIN, "成全", "劉若英", "讓療癒路線保留成熟與放手的角度。"),
                 _curated_song(2010, SONG_CATEGORY_MANDARIN, "連名帶姓", "張惠妹", "即使療癒主題，也保留情緒並未完全散去的真實。"),
+                _curated_song(2020, SONG_CATEGORY_MANDARIN, "如果可以", "韋禮安", "近年的聲線同編曲，令療癒不會太舊派。"),
+                _curated_song(2020, SONG_CATEGORY_MANDARIN, "刻在我心底的名字", "盧廣仲", "留一點仍未完全放低的餘味，符合成年人療癒節奏。"),
             ),
         ),
     ]
@@ -757,12 +769,16 @@ def _build_default_theme() -> ThemePack:
             _curated_song(1990, SONG_CATEGORY_CANTONESE, "海闊天空", "Beyond", "最後用希望感作結。"),
             _curated_song(1980, SONG_CATEGORY_CANTONESE, "偏偏喜歡你", "陳百強", "把節目尾段拉回成熟電台的經典質感。"),
             _curated_song(1970, SONG_CATEGORY_CANTONESE, "家變", "羅文", "如果想更舊派，這首歌可以立即拉出七十年代氣味。"),
+            _curated_song(2020, SONG_CATEGORY_CANTONESE, "銀河修理員", "Dear Jane", "令整體陪伴感多一點近年的空氣同距離感。"),
+            _curated_song(2020, SONG_CATEGORY_CANTONESE, "留一天與你喘息", "陳卓賢", "放喺近代節目尾段，氣氛會更貼近而家。"),
             _curated_song(2010, SONG_CATEGORY_MANDARIN, "小幸運", "田馥甄", "留一點柔軟餘韻畀聽眾自己慢慢消化。"),
             _curated_song(2000, SONG_CATEGORY_MANDARIN, "十年", "陳奕迅", "用熟悉度高的作品承接情緒。"),
             _curated_song(1990, SONG_CATEGORY_MANDARIN, "聽海", "張惠妹", "讓感受有更大的空間可以呼吸。"),
             _curated_song(1980, SONG_CATEGORY_MANDARIN, "明天你是否依然愛我", "童安格", "用老派情歌留住陪伴感。"),
             _curated_song(1970, SONG_CATEGORY_MANDARIN, "月亮代表我的心", "鄧麗君", "如果要更早年代，這首歌幾乎一響就有畫面。"),
             _curated_song(2000, SONG_CATEGORY_MANDARIN, "勇氣", "梁靜茹", "在尾段補上一點向前走的力量。"),
+            _curated_song(2020, SONG_CATEGORY_MANDARIN, "如果可以", "韋禮安", "讓陪伴線去到現代時仍然保持流行感。"),
+            _curated_song(2020, SONG_CATEGORY_MANDARIN, "刻在我心底的名字", "盧廣仲", "將近年的情緒語感補進節目尾聲。"),
         ),
     )
 
@@ -801,6 +817,8 @@ def _song_category_label(category: str) -> str:
 def _era_label(era_start: int) -> str:
     if era_start == MODERN_ERA_START:
         return "現代"
+    if era_start == 2010:
+        return "10年代"
     decade = str(era_start)[-2:]
     return f"{decade}年代"
 

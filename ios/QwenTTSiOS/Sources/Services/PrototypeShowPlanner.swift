@@ -203,14 +203,18 @@ extension PrototypeShowPlanner {
                 song(.twoThousands, .cantonese, "好心分手", "盧巧音", "最後用比較收斂但仍然刺心的角度作結。"),
                 song(.nineties, .cantonese, "追", "張國榮", "用偏向懷念的角度，放大掛住一個人的失重感。"),
                 song(.eighties, .cantonese, "一生何求", "陳百強", "將舊情未放低的重量拉回經典年代。"),
-                song(.modern, .cantonese, "高山低谷", "林奕匡", "讓情緒由失落慢慢行到面對自己。"),
+                song(.twoTens, .cantonese, "高山低谷", "林奕匡", "讓情緒由失落慢慢行到面對自己。"),
+                song(.modern, .cantonese, "銀河修理員", "Dear Jane", "用近年的傷感口吻，把思念寫得更貼近而家呢一代。"),
+                song(.modern, .cantonese, "到底發生過什麼事", "Dear Jane", "將未放低同自我追問推到更近代的情緒語境。"),
                 song(.twoThousands, .mandarin, "十年", "陳奕迅", "把熟悉的遺憾感轉成更直接的華語流行情緒。"),
                 song(.twoThousands, .mandarin, "可惜不是你", "梁靜茹", "寫出那種明明很近卻再也回不去的距離。"),
                 song(.twoThousands, .mandarin, "成全", "劉若英", "把不捨推向成熟放手的層次。"),
                 song(.nineties, .mandarin, "味道", "辛曉琪", "讓思念變得更具畫面感，也更貼近舊情回憶。"),
                 song(.nineties, .mandarin, "聽海", "張惠妹", "把壓住的情緒打開，讓掛念有出口。"),
-                song(.modern, .mandarin, "慢冷", "梁靜茹", "延續那種後知後覺的難受與自省。"),
-                song(.modern, .mandarin, "小幸運", "田馥甄", "讓回憶帶點暖意，不至於全程下沉。"),
+                song(.twoTens, .mandarin, "慢冷", "梁靜茹", "延續那種後知後覺的難受與自省。"),
+                song(.twoTens, .mandarin, "小幸運", "田馥甄", "讓回憶帶點暖意，不至於全程下沉。"),
+                song(.modern, .mandarin, "刻在我心底的名字", "盧廣仲", "用近代華語情歌講出仍然放唔低的名字。"),
+                song(.modern, .mandarin, "如果可以", "韋禮安", "將掛念寫成一種想回頭改寫結果的心情。"),
                 song(.seventies, .mandarin, "月亮代表我的心", "鄧麗君", "如果想將年代拉早，這首歌能把思念說得非常純粹。")
             ]
         ),
@@ -235,8 +239,12 @@ extension PrototypeShowPlanner {
                 song(.nineties, .mandarin, "聽海", "張惠妹", "讓舊記憶變得更具海浪感同空間感。"),
                 song(.twoThousands, .mandarin, "十年", "陳奕迅", "最後再回到時間與關係的重量。"),
                 song(.twoThousands, .mandarin, "後來的我們", "五月天", "把回憶感延伸到成年之後的回望。"),
-                song(.modern, .mandarin, "小幸運", "田馥甄", "保留一點青春暖色，令整個懷舊旅程更完整。"),
-                song(.modern, .mandarin, "連名帶姓", "張惠妹", "讓回憶不只溫柔，也有刺痛與未完成感。")
+                song(.twoTens, .mandarin, "小幸運", "田馥甄", "保留一點青春暖色，令整個懷舊旅程更完整。"),
+                song(.twoTens, .mandarin, "連名帶姓", "張惠妹", "讓回憶不只溫柔，也有刺痛與未完成感。"),
+                song(.modern, .cantonese, "銀河修理員", "Dear Jane", "即使講懷舊，都可以加一點近年的柔軟同空白感。"),
+                song(.modern, .cantonese, "留一天與你喘息", "陳卓賢", "把回憶拉入更現代的都市情緒。"),
+                song(.modern, .mandarin, "刻在我心底的名字", "盧廣仲", "把舊日時光轉成近年最有畫面的青春回望。"),
+                song(.modern, .mandarin, "如果可以", "韋禮安", "近年的回憶系情歌，保留想改寫過去的遺憾感。")
             ]
         ),
         ThemePack(
@@ -246,22 +254,26 @@ extension PrototypeShowPlanner {
             openingLead: "如果你今日已經用盡力氣，依家就唔好再逼自己堅強，先慢慢抖一口氣。",
             closingLead: "希望你記住，溫柔唔係軟弱，而係明知辛苦仍然願意對自己好一點。",
             songs: [
-                song(.modern, .cantonese, "陀飛輪", "陳奕迅", "點出成年人最真實的時間焦慮。"),
-                song(.modern, .cantonese, "高山低谷", "林奕匡", "承接跌宕情緒，帶出慢慢抬頭的力量。"),
-                song(.modern, .cantonese, "今天只做一件事", "陳奕迅", "提醒聽眾依家可以先只照顧一件事，就是自己。"),
+                song(.twoTens, .cantonese, "陀飛輪", "陳奕迅", "點出成年人最真實的時間焦慮。"),
+                song(.twoTens, .cantonese, "高山低谷", "林奕匡", "承接跌宕情緒，帶出慢慢抬頭的力量。"),
+                song(.twoTens, .cantonese, "今天只做一件事", "陳奕迅", "提醒聽眾依家可以先只照顧一件事，就是自己。"),
                 song(.twoThousands, .cantonese, "下一站天后", "Twins", "加一點明亮，令節目不只是低沉。"),
                 song(.nineties, .cantonese, "海闊天空", "Beyond", "最後用最有力量的經典做收結。"),
                 song(.eighties, .cantonese, "陪著你走", "盧冠廷", "補上一種被陪伴的安定感。"),
                 song(.eighties, .cantonese, "偏偏喜歡你", "陳百強", "在療癒路線中留一點柔和懷舊感。"),
                 song(.twoThousands, .cantonese, "終身美麗", "鄭秀文", "把辛苦過後的自我接納慢慢講出來。"),
-                song(.modern, .mandarin, "光年之外", "G.E.M.", "把情緒轉成面向未來的想像。"),
-                song(.modern, .mandarin, "小幸運", "田馥甄", "讓疲倦裡面仍然留住一點柔軟。"),
+                song(.modern, .cantonese, "留一天與你喘息", "陳卓賢", "用較新的城市感陪伴，讓人感覺有人同你一齊抖氣。"),
+                song(.modern, .cantonese, "銀河修理員", "Dear Jane", "令療癒感帶少少近代樂隊的遼闊感。"),
+                song(.twoTens, .mandarin, "光年之外", "G.E.M.", "把情緒轉成面向未來的想像。"),
+                song(.twoTens, .mandarin, "小幸運", "田馥甄", "讓疲倦裡面仍然留住一點柔軟。"),
                 song(.twoThousands, .mandarin, "勇氣", "梁靜茹", "提醒聽眾重新向前，需要的只是小小勇氣。"),
                 song(.twoThousands, .mandarin, "隱形的翅膀", "張韶涵", "給正在捱過低潮的人一點明亮的支撐。"),
-                song(.modern, .mandarin, "平凡之路", "朴樹", "讓節目慢慢走去比較開闊的結尾。"),
-                song(.modern, .mandarin, "演員", "薛之謙", "把壓力與關係中的消耗，換成一種看清自己的距離。"),
+                song(.twoTens, .mandarin, "平凡之路", "朴樹", "讓節目慢慢走去比較開闊的結尾。"),
+                song(.twoTens, .mandarin, "演員", "薛之謙", "把壓力與關係中的消耗，換成一種看清自己的距離。"),
                 song(.twoThousands, .mandarin, "成全", "劉若英", "讓療癒路線保留成熟與放手的角度。"),
-                song(.modern, .mandarin, "連名帶姓", "張惠妹", "即使療癒主題，也保留情緒並未完全散去的真實。")
+                song(.twoTens, .mandarin, "連名帶姓", "張惠妹", "即使療癒主題，也保留情緒並未完全散去的真實。"),
+                song(.modern, .mandarin, "如果可以", "韋禮安", "近年的聲線同編曲，令療癒不會太舊派。"),
+                song(.modern, .mandarin, "刻在我心底的名字", "盧廣仲", "留一點仍未完全放低的餘味，符合成年人療癒節奏。")
             ]
         )
     ]
@@ -276,17 +288,21 @@ extension PrototypeShowPlanner {
             song(.twoThousands, .cantonese, "歲月如歌", "陳奕迅", "用熟悉感先打開整個節目的氛圍。"),
             song(.twoThousands, .cantonese, "K歌之王", "陳奕迅", "承接那些有口難言的情緒。"),
             song(.nineties, .cantonese, "追", "張國榮", "用經典撐起電台 DJ 的陪伴質感。"),
-            song(.modern, .cantonese, "高山低谷", "林奕匡", "讓氣氛逐漸由低回轉向釋放。"),
-            song(.modern, .cantonese, "今天只做一件事", "陳奕迅", "在後段加入溫柔安定感。"),
+            song(.twoTens, .cantonese, "高山低谷", "林奕匡", "讓氣氛逐漸由低回轉向釋放。"),
+            song(.twoTens, .cantonese, "今天只做一件事", "陳奕迅", "在後段加入溫柔安定感。"),
             song(.nineties, .cantonese, "海闊天空", "Beyond", "最後用希望感作結。"),
             song(.eighties, .cantonese, "偏偏喜歡你", "陳百強", "把節目尾段拉回成熟電台的經典質感。"),
             song(.seventies, .cantonese, "家變", "羅文", "如果想更舊派，這首歌可以立即拉出七十年代氣味。"),
-            song(.modern, .mandarin, "小幸運", "田馥甄", "留一點柔軟餘韻畀聽眾自己慢慢消化。"),
+            song(.modern, .cantonese, "銀河修理員", "Dear Jane", "令整體陪伴感多一點近年的空氣同距離感。"),
+            song(.modern, .cantonese, "留一天與你喘息", "陳卓賢", "放喺近代節目尾段，氣氛會更貼近而家。"),
+            song(.twoTens, .mandarin, "小幸運", "田馥甄", "留一點柔軟餘韻畀聽眾自己慢慢消化。"),
             song(.twoThousands, .mandarin, "十年", "陳奕迅", "用熟悉度高的作品承接情緒。"),
             song(.nineties, .mandarin, "聽海", "張惠妹", "讓感受有更大的空間可以呼吸。"),
             song(.eighties, .mandarin, "明天你是否依然愛我", "童安格", "用老派情歌留住陪伴感。"),
             song(.seventies, .mandarin, "月亮代表我的心", "鄧麗君", "如果要更早年代，這首歌幾乎一響就有畫面。"),
-            song(.twoThousands, .mandarin, "勇氣", "梁靜茹", "在尾段補上一點向前走的力量。")
+            song(.twoThousands, .mandarin, "勇氣", "梁靜茹", "在尾段補上一點向前走的力量。"),
+            song(.modern, .mandarin, "如果可以", "韋禮安", "讓陪伴線去到現代時仍然保持流行感。"),
+            song(.modern, .mandarin, "刻在我心底的名字", "盧廣仲", "將近年的情緒語感補進節目尾聲。")
         ]
     )
 

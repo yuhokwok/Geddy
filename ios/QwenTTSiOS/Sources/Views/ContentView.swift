@@ -12,7 +12,6 @@ struct ContentView: View {
                     voiceInputSection
                     showControlsSection
                     playlistSection
-                    playbackSection
                 }
                 .padding(20)
             }
@@ -32,6 +31,9 @@ struct ContentView: View {
                     }
                     .accessibilityLabel("設定")
                 }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                bottomPlayerBar
             }
         }
         .task {
@@ -189,7 +191,7 @@ struct ContentView: View {
                     )
                     .frame(height: 88)
 
-                    Text("由 70 年代揀到現代，Geddy 會盡量將歌單鎖定喺你指定嘅年代範圍。")
+                    Text("由 70、80、90、00、10 年代一路揀到現代，Geddy 會盡量將歌單鎖定喺你指定嘅年代範圍。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -278,89 +280,97 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private var playbackSection: some View {
+    private var bottomPlayerBar: some View {
         if viewModel.currentShow != nil {
-            card("播放控制") {
-                VStack(alignment: .leading, spacing: 16) {
-                    if let item = viewModel.currentPlaybackItem {
-                        VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 14) {
+                if let item = viewModel.currentPlaybackItem {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: playbackSymbol(for: item))
+                            .font(.title3)
+                            .foregroundStyle(Color(red: 0.84, green: 0.37, blue: 0.18))
+                            .frame(width: 34, height: 34)
+                            .background(Color.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                        VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                Label(playbackKindLabel(for: item), systemImage: playbackSymbol(for: item))
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.secondary)
-                                Spacer()
+                                Text(item.title)
+                                    .font(.headline)
+                                    .lineLimit(1)
+                                Spacer(minLength: 8)
                                 Text(viewModel.isPlaying ? "播放中" : "已暫停")
-                                    .font(.footnote.weight(.semibold))
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(viewModel.isPlaying ? Color(red: 0.84, green: 0.37, blue: 0.18) : .secondary)
                             }
-
-                            Text(item.title)
-                                .font(.headline)
-                            Text(item.subtitle)
-                                .foregroundStyle(.secondary)
-
-                            VStack(spacing: 8) {
-                                ProgressView(value: viewModel.playbackProgress)
-                                    .tint(Color(red: 0.84, green: 0.37, blue: 0.18))
-
-                                HStack {
-                                    Text(viewModel.playbackElapsedText)
-                                        .monospacedDigit()
-                                    Spacer()
-                                    Text(viewModel.playbackRemainingText)
-                                        .monospacedDigit()
-                                }
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                            HStack {
+                                Text("\(playbackKindLabel(for: item)) · \(item.subtitle)")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                Spacer(minLength: 8)
+                                Text("\(viewModel.playbackElapsedText) / \(viewModel.playbackRemainingText)")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
                             }
                         }
-                    } else {
-                        Text("節目已就緒，可以開始播放。")
-                            .foregroundStyle(.secondary)
                     }
+                } else {
+                    Text("節目已就緒，可以開始播放。")
+                        .foregroundStyle(.secondary)
+                }
 
-                    HStack(spacing: 12) {
-                        Button {
-                            Task {
-                                await viewModel.skipToPreviousSong()
-                            }
-                        } label: {
-                            Label("上一首歌", systemImage: "backward.end.fill")
-                                .frame(maxWidth: .infinity)
+                ProgressView(value: viewModel.playbackProgress)
+                    .tint(Color(red: 0.84, green: 0.37, blue: 0.18))
+
+                HStack(spacing: 10) {
+                    Button {
+                        Task {
+                            await viewModel.skipToPreviousSong()
                         }
-                        .buttonStyle(.bordered)
-
-                        Button {
-                            Task {
-                                await viewModel.togglePlayback()
-                            }
-                        } label: {
-                            Label(viewModel.isPlaying ? "暫停" : "播放", systemImage: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color(red: 0.84, green: 0.37, blue: 0.18))
-
-                        Button {
-                            Task {
-                                await viewModel.skipToNextSong()
-                            }
-                        } label: {
-                            Label("下一首歌", systemImage: "forward.end.fill")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                    }
-
-                    Button("停止整個節目") {
-                        viewModel.stopPlayback()
+                    } label: {
+                        Image(systemName: "backward.end.fill")
+                            .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
 
-                    Text("Control Centre 會支援播放 / 暫停 / 上一首歌 / 下一首歌。歌曲之間的開場白與獨白會由 app 自己接力播放。")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    Button {
+                        Task {
+                            await viewModel.togglePlayback()
+                        }
+                    } label: {
+                        Label(viewModel.isPlaying ? "暫停" : "播放", systemImage: viewModel.isPlaying ? "pause.fill" : "play.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(red: 0.84, green: 0.37, blue: 0.18))
+
+                    Button {
+                        Task {
+                            await viewModel.skipToNextSong()
+                        }
+                    } label: {
+                        Image(systemName: "forward.end.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
+                        viewModel.stopPlayback()
+                    } label: {
+                        Image(systemName: "stop.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                 }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 16)
+            .background(.ultraThinMaterial)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.35))
+                    .frame(height: 1)
             }
         }
     }
