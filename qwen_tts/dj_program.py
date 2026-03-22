@@ -313,6 +313,7 @@ class OpenRouterDJProgramPlanner:
             ) from exc
 
         try:
+            #print("OpenRouter raw response:", raw_body.decode("utf-8"))  # Debugging line
             decoded = json.loads(raw_body.decode("utf-8"))
         except json.JSONDecodeError as exc:
             raise RuntimeError("OpenRouter returned invalid JSON.") from exc
