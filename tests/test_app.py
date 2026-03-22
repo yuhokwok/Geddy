@@ -123,12 +123,14 @@ class AppTestCase(unittest.TestCase):
                 "song_category": "廣東歌",
                 "era_range_start": 1980,
                 "era_range_end": 2020,
+                "prefer_obscure_songs": "true",
             }
         )
 
         self.assertEqual(request.song_category, "cantonese")
         self.assertEqual(request.era_range_start, 1980)
         self.assertEqual(request.era_range_end, 2020)
+        self.assertTrue(request.prefer_obscure_songs)
 
     def test_program_request_rejects_invalid_era_range(self):
         with self.assertRaisesRegex(ValueError, "less than or equal"):
@@ -175,6 +177,37 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("月亮代表我的心", titles)
         self.assertIn("明天你是否依然愛我", titles)
         self.assertNotIn("明年今日", titles)
+
+    def test_rule_based_planner_prioritizes_less_mainstream_songs_when_requested(self):
+        planner = RuleBasedDJProgramPlanner()
+        program = planner.make_program(
+            DJProgramRequest.from_payload(
+                {
+                    "transcript": "最近有點掛住以前的感情",
+                    "desired_song_count": 6,
+                    "song_category": "mandarin",
+                    "era_range_start": 1990,
+                    "era_range_end": 2020,
+                    "prefer_obscure_songs": True,
+                }
+            )
+        )
+
+        titles = [song.titleHint for song in program.songSuggestions]
+        self.assertIn("味道", titles)
+        self.assertIn("成全", titles)
+        self.assertNotIn("十年", titles[:2])
+        self.assertNotIn("小幸運", titles[:2])
+
+    def test_program_request_rejects_invalid_obscure_song_flag(self):
+        with self.assertRaisesRegex(ValueError, "boolean"):
+            DJProgramRequest.from_payload(
+                {
+                    "transcript": "hello",
+                    "desired_song_count": 6,
+                    "prefer_obscure_songs": "maybe",
+                }
+            )
 
     def test_create_default_planner_handles_missing_openrouter_key_file(self):
         with patch.object(dj_program_module, "load_openrouter_api_key", return_value=""):

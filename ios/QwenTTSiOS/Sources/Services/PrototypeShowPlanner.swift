@@ -100,13 +100,15 @@ struct PrototypeShowPlanner {
         )
 
         let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        let opening = """
-        呢度係 AI 鄭子誠。
-        你頭先講咗一句：「\(trimmedTranscript)」。
-        有啲感受，唔一定要即刻講清楚，但可以慢慢聽清楚。
-        我想用一組\(songPreferences.songCategory.title)，陪你由\(songPreferences.eraSummary)一路行過呢一段 \(theme.mood)。
-        \(theme.openingLead)
-        """
+        let openingLines = [
+            "呢度係 AI 鄭子誠。",
+            "你頭先講咗一句：「\(trimmedTranscript)」。",
+            "有啲感受，唔一定要即刻講清楚，但可以慢慢聽清楚。",
+            "我想用一組\(songPreferences.songCategory.title)，陪你由\(songPreferences.eraSummary)一路行過呢一段 \(theme.mood)。",
+            songPreferences.preferObscureSongs ? "今次我都會試下幫你搵幾首無咁大路、但同樣貼題嘅歌。" : nil,
+            theme.openingLead,
+        ].compactMap { $0 }
+        let opening = openingLines.joined(separator: "\n")
 
         let bridges = songs.enumerated().dropLast().map { index, song in
             BridgeMonologue(
@@ -151,6 +153,7 @@ struct PrototypeShowPlanner {
             .filter { matches(song: $0, preferences: preferences) }
             .map(\.suggestion)
         var ordered = dedupe(themeMatches + catalogMatches)
+        ordered = prioritizeObscureSongsIfNeeded(ordered, preferObscureSongs: preferences.preferObscureSongs)
 
         if ordered.count < desiredSongCount {
             ordered = dedupe(
@@ -158,6 +161,7 @@ struct PrototypeShowPlanner {
                     + theme.songs.map(\.suggestion)
                     + Self.catalogSongs.map(\.suggestion)
             )
+            ordered = prioritizeObscureSongsIfNeeded(ordered, preferObscureSongs: preferences.preferObscureSongs)
         }
 
         return Array(ordered.prefix(desiredSongCount))
@@ -179,6 +183,22 @@ struct PrototypeShowPlanner {
             return seen.insert(key).inserted
         }
     }
+
+    private func prioritizeObscureSongsIfNeeded(
+        _ songs: [SongSuggestion],
+        preferObscureSongs: Bool
+    ) -> [SongSuggestion] {
+        guard preferObscureSongs else { return songs }
+
+        return songs.sorted { lhs, rhs in
+            let leftScore = Self.mainstreamScore(for: lhs)
+            let rightScore = Self.mainstreamScore(for: rhs)
+            if leftScore != rightScore {
+                return leftScore < rightScore
+            }
+            return lhs.titleHint.localizedStandardCompare(rhs.titleHint) == .orderedAscending
+        }
+    }
 }
 
 extension PrototypeShowPlanner {
@@ -187,6 +207,22 @@ extension PrototypeShowPlanner {
     說話節奏從容，情感細膩，像在凌晨電台陪伴失眠聽眾，
     廣東話口吻自然，帶感性而不誇張的陪伴感。
     """
+
+    private static let mainstreamSongKeys: Set<String> = [
+        songKey(title: "明年今日", artist: "陳奕迅"),
+        songKey(title: "十年", artist: "陳奕迅"),
+        songKey(title: "小幸運", artist: "田馥甄"),
+        songKey(title: "後來", artist: "劉若英"),
+        songKey(title: "海闊天空", artist: "Beyond"),
+        songKey(title: "千千闋歌", artist: "陳慧嫻"),
+        songKey(title: "月亮代表我的心", artist: "鄧麗君"),
+        songKey(title: "勇氣", artist: "梁靜茹"),
+        songKey(title: "光年之外", artist: "G.E.M."),
+        songKey(title: "如果可以", artist: "韋禮安"),
+        songKey(title: "刻在我心底的名字", artist: "盧廣仲"),
+        songKey(title: "追", artist: "張國榮"),
+        songKey(title: "高山低谷", artist: "林奕匡"),
+    ]
 
     private static let themePacks: [ThemePack] = [
         ThemePack(
@@ -338,6 +374,14 @@ extension PrototypeShowPlanner {
             )
         )
     }
+
+    private static func mainstreamScore(for song: SongSuggestion) -> Int {
+        mainstreamSongKeys.contains(songKey(title: song.titleHint, artist: song.artistHint)) ? 1 : 0
+    }
+
+    private static func songKey(title: String, artist: String) -> String {
+        "\(title.lowercased())::\(artist.lowercased())"
+    }
 }
 
 @MainActor
@@ -382,6 +426,7 @@ struct OnDeviceFoundationModelPlanner {
         searchQuery 係俾 iOS 之後用 Apple Music 搜尋，唔需要驗證 catalog。
         保留深夜電台式嘅溫柔陪伴感，但唔好假設現實時間一定係夜晚。
         要準確跟從用戶要求嘅歌曲種類同年代範圍。
+        如果用戶想要冷門歌曲，請優先考慮無咁大路、但仍然合理易搵嘅歌，避免全都揀最常見代表作。
         """
 
         let prompt = """
@@ -391,6 +436,7 @@ struct OnDeviceFoundationModelPlanner {
 
         歌曲種類：\(songPreferences.songCategory.title)
         年代範圍：\(songPreferences.eraSummary)
+        冷門歌曲偏好：\(songPreferences.preferObscureSongs ? "有，請試下加入無咁大路嘅歌。" : "無，按整體情緒流向安排即可。")
 
         請生成一個 \(desiredSongCount) 首歌嘅陪伴系節目。語氣要感性、克制、有陪伴感，避免明確講而家係今晚、凌晨或者夜深。
         只可以回傳 JSON，結構如下：

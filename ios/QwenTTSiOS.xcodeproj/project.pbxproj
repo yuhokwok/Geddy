@@ -17,6 +17,7 @@
 		C5FAFE4437D83C8A8401284F /* DJBackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20BCB7743F954EAF8A7486B4 /* DJBackendClient.swift */; };
 		E06E69C003152F2F6C87EC20 /* RadioDJViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63D7F67A1C23B4546D3F089 /* RadioDJViewModel.swift */; };
 		E811EDDD95138C431083C513 /* PrototypeShowPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A399BC0C9932B7BDD631F955 /* PrototypeShowPlanner.swift */; };
+		EDA3A7A52F70198E000D804D /* 88-icon.png in Resources */ = {isa = PBXBuildFile; fileRef = EDA3A7A32F70101B000D804D /* 88-icon.png */; };
 		EF1D9BAA78F4EBB38A0F1EAD /* RadioDJModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE574C5396FD76B940E2620D /* RadioDJModels.swift */; };
 /* End PBXBuildFile section */
 
@@ -32,6 +33,7 @@
 		B3EC43F2CCEFC926C6C1440A /* StationPlaybackCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPlaybackCoordinator.swift; sourceTree = "<group>"; };
 		CDBDD94B56853165B0C22A71 /* SpeechCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechCaptureService.swift; sourceTree = "<group>"; };
 		D63D7F67A1C23B4546D3F089 /* RadioDJViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioDJViewModel.swift; sourceTree = "<group>"; };
+		EDA3A7A32F70101B000D804D /* 88-icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "88-icon.png"; sourceTree = "<group>"; };
 		F4EACBEBF8C87CF963760FA0 /* AppleMusicCatalogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicCatalogService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -61,6 +63,7 @@
 				412C6FB23FCF67B4A5E13738 /* Services */,
 				0F9951BE39F5431055556766 /* ViewModels */,
 				8BF560D55A8B86B6A665AC79 /* Views */,
+				EDA3A7A32F70101B000D804D /* 88-icon.png */,
 			);
 			name = Sources;
 			path = QwenTTSiOS/Sources;
@@ -119,6 +122,7 @@
 			buildConfigurationList = 5C7733112B9EED5A9820AF5B /* Build configuration list for PBXNativeTarget "QwenTTSiOS" */;
 			buildPhases = (
 				4286D02C5217BA4C1063E3EE /* Sources */,
+				EDA3A7A42F701988000D804D /* Resources */,
 			);
 			buildRules = (
 			);
@@ -158,6 +162,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		EDA3A7A42F701988000D804D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EDA3A7A52F70198E000D804D /* 88-icon.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		4286D02C5217BA4C1063E3EE /* Sources */ = {

@@ -44,10 +44,16 @@ final class RadioDJViewModel: ObservableObject {
             defaults.set(selectedEraRangeEnd.rawValue, forKey: DefaultsKey.selectedEraRangeEnd)
         }
     }
+    @Published var preferObscureSongs: Bool {
+        didSet {
+            defaults.set(preferObscureSongs, forKey: DefaultsKey.preferObscureSongs)
+        }
+    }
     @Published private(set) var availableLanguages: [String]
     @Published private(set) var availableVoicePresets: [VoicePreset]
     @Published private(set) var backendModelName: String
     @Published private(set) var currentShow: RadioShow?
+    @Published private(set) var savedPrograms: [SavedProgramSummary] = []
     @Published private(set) var isRefreshingConfig = false
     @Published private(set) var isRecording = false
     @Published private(set) var isPreparingShow = false
@@ -69,6 +75,9 @@ final class RadioDJViewModel: ObservableObject {
     private var didBootstrap = false
     private var cancellables = Set<AnyCancellable>()
     private var backgroundSpeechTask: Task<Void, Never>?
+    private var currentDraft: RadioShowDraft?
+    private var currentClipsByKey: [String: SpokenClip] = [:]
+    private var currentProgramSignature: String?
 
     private enum DraftSource {
         case backend
@@ -98,6 +107,7 @@ final class RadioDJViewModel: ObservableObject {
         static let selectedSongCategory = "ai.dj.selectedSongCategory"
         static let selectedEraRangeStart = "ai.dj.selectedEraRangeStart"
         static let selectedEraRangeEnd = "ai.dj.selectedEraRangeEnd"
+        static let preferObscureSongs = "ai.dj.preferObscureSongs"
     }
 
     init(
@@ -143,6 +153,7 @@ final class RadioDJViewModel: ObservableObject {
         self.selectedSongCategory = initialSongCategory
         self.selectedEraRangeStart = initialEraRangeStart
         self.selectedEraRangeEnd = initialEraRangeEnd
+        self.preferObscureSongs = defaults.bool(forKey: DefaultsKey.preferObscureSongs)
         self.availableLanguages = ["Chinese", "English"]
         self.backendModelName = "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16"
 
@@ -179,6 +190,7 @@ final class RadioDJViewModel: ObservableObject {
         guard !didBootstrap else { return }
         didBootstrap = true
         await refreshBackendConfig()
+        refreshSavedPrograms()
     }
 
     func refreshBackendConfig() async {
@@ -224,16 +236,15 @@ final class RadioDJViewModel: ObservableObject {
 
         do {
             persistServerURL()
-            let cacheSignature = shouldCachePrograms
-                ? cacheStore.signature(
-                    transcript: trimmedTranscript,
-                    hostStyleDescription: hostStyleDescription,
-                    desiredSongCount: Self.desiredSongCount,
-                    serverURL: serverURL,
-                    modelName: backendModelName,
-                    songPreferences: songPreferences
-                )
-                : nil
+            let programSignature = cacheStore.signature(
+                transcript: trimmedTranscript,
+                hostStyleDescription: hostStyleDescription,
+                desiredSongCount: Self.desiredSongCount,
+                serverURL: serverURL,
+                modelName: backendModelName,
+                songPreferences: songPreferences
+            )
+            let cacheSignature = shouldCachePrograms ? programSignature : nil
 
             let cachedBundle: CachedShowBundle?
             if let cacheSignature {
@@ -301,13 +312,18 @@ final class RadioDJViewModel: ObservableObject {
                 clipsByKey: cachedClips
             )
             currentShow = initialShow
+            currentDraft = draft
+            currentClipsByKey = cachedClips
+            currentProgramSignature = programSignature
 
             if shouldCachePrograms, let cacheSignature {
                 _ = try cacheStore.saveBundle(
                     signature: cacheSignature,
+                    transcript: trimmedTranscript,
                     draft: draft,
                     clipsByKey: cachedClips
                 )
+                refreshSavedPrograms()
             }
 
             try await playbackCoordinator.loadAndPlay(initialShow.playbackItems)
@@ -409,12 +425,12 @@ final class RadioDJViewModel: ObservableObject {
         await playbackCoordinator.togglePlayback()
     }
 
-    func skipToNextSong() async {
-        await playbackCoordinator.skipToNextSong()
+    func skipToNextSegment() async {
+        await playbackCoordinator.skipToNextSegment()
     }
 
-    func skipToPreviousSong() async {
-        await playbackCoordinator.skipToPreviousSong()
+    func skipToPreviousSegment() async {
+        await playbackCoordinator.skipToPreviousSegment()
     }
 
     func playPlaybackItem(_ item: StationPlaybackItem) async {
@@ -433,6 +449,89 @@ final class RadioDJViewModel: ObservableObject {
         isGeneratingRemainingSpeech = false
         playbackCoordinator.stop()
         statusMessage = "已停止播放。"
+    }
+
+    func saveCurrentShow() {
+        guard let currentShow, let currentDraft else {
+            alertMessage = "而家未有可儲存嘅節目。"
+            return
+        }
+
+        let signature = currentProgramSignature ?? cacheStore.signature(
+            transcript: currentShow.transcript,
+            hostStyleDescription: currentDraft.voiceDescription,
+            desiredSongCount: Self.desiredSongCount,
+            serverURL: serverURL,
+            modelName: backendModelName,
+            songPreferences: songPreferences
+        )
+
+        do {
+            _ = try cacheStore.saveBundle(
+                signature: signature,
+                transcript: currentShow.transcript,
+                draft: currentDraft,
+                clipsByKey: currentClipsByKey
+            )
+            currentProgramSignature = signature
+            refreshSavedPrograms()
+            statusMessage = "已將今集節目儲低，之後可以再揀返嚟聽。"
+        } catch {
+            alertMessage = error.localizedDescription
+            statusMessage = "未能儲存而家嘅節目。"
+        }
+    }
+
+    func loadSavedProgram(_ savedProgram: SavedProgramSummary) async {
+        backgroundSpeechTask?.cancel()
+        backgroundSpeechTask = nil
+        isGeneratingRemainingSpeech = false
+
+        do {
+            guard let bundle = try cacheStore.loadBundle(signature: savedProgram.signature) else {
+                alertMessage = "搵唔返已儲存節目內容。"
+                refreshSavedPrograms()
+                return
+            }
+
+            let resolvedSongs = try await musicCatalogService.resolveSuggestions(bundle.draft.songSuggestions)
+            let restoredShow = buildShow(
+                draft: bundle.draft,
+                resolvedSongs: resolvedSongs,
+                transcript: bundle.transcript,
+                clipsByKey: bundle.clipsByKey
+            )
+
+            currentShow = restoredShow
+            currentDraft = bundle.draft
+            currentClipsByKey = bundle.clipsByKey
+            currentProgramSignature = bundle.signature
+            try await playbackCoordinator.loadAndPlay(restoredShow.playbackItems)
+            statusMessage = "已載入〈\(savedProgram.title)〉，開始播放。"
+        } catch {
+            alertMessage = error.localizedDescription
+            statusMessage = "未能載入已儲存節目。"
+        }
+    }
+
+    func deleteSavedProgram(_ savedProgram: SavedProgramSummary) {
+        do {
+            try cacheStore.deleteSavedProgram(signature: savedProgram.signature)
+
+            if currentProgramSignature == savedProgram.signature {
+                stopPlayback()
+                currentShow = nil
+                currentDraft = nil
+                currentClipsByKey = [:]
+                currentProgramSignature = nil
+            }
+
+            refreshSavedPrograms()
+            statusMessage = "已刪除〈\(savedProgram.title)〉。"
+        } catch {
+            alertMessage = error.localizedDescription
+            statusMessage = "未能刪除已儲存節目。"
+        }
     }
 
     private func beginRecording() async {
@@ -667,6 +766,8 @@ final class RadioDJViewModel: ObservableObject {
                     clipsByKey: clipsByKey
                 )
                 currentShow = updatedShow
+                currentDraft = draft
+                currentClipsByKey = clipsByKey
                 playbackCoordinator.updatePlaybackItems(updatedShow.playbackItems)
             } catch {
                 failedCount += 1
@@ -677,9 +778,11 @@ final class RadioDJViewModel: ObservableObject {
             do {
                 _ = try cacheStore.saveBundle(
                     signature: cacheSignature,
+                    transcript: transcript,
                     draft: draft,
                     clipsByKey: clipsByKey
                 )
+                refreshSavedPrograms()
             } catch {
                 alertMessage = error.localizedDescription
             }
@@ -708,6 +811,14 @@ final class RadioDJViewModel: ObservableObject {
 
     private func persistServerURL() {
         defaults.set(serverURL.trimmingCharacters(in: .whitespacesAndNewlines), forKey: DefaultsKey.serverURL)
+    }
+
+    private func refreshSavedPrograms() {
+        do {
+            savedPrograms = try cacheStore.listSavedPrograms()
+        } catch {
+            savedPrograms = []
+        }
     }
 
     private func syncVoicePresets(from config: BackendConfig) {
@@ -741,7 +852,8 @@ final class RadioDJViewModel: ObservableObject {
         ProgramSongPreferences(
             songCategory: selectedSongCategory,
             eraRangeStart: selectedEraRangeStart,
-            eraRangeEnd: selectedEraRangeEnd
+            eraRangeEnd: selectedEraRangeEnd,
+            preferObscureSongs: preferObscureSongs
         )
     }
 

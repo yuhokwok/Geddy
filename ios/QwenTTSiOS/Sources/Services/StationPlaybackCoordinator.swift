@@ -1,8 +1,7 @@
 import AVFAudio
 import Combine
 import Foundation
-import MediaPlayer
-@preconcurrency import MusicKit
+@preconcurrency import MediaPlayer
 
 @MainActor
 final class StationPlaybackCoordinator: NSObject, ObservableObject {
@@ -12,11 +11,12 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     @Published private(set) var currentPlaybackTime: TimeInterval = 0
     @Published private(set) var currentPlaybackDuration: TimeInterval = 0
 
-    private let musicPlayer = ApplicationMusicPlayer.shared
+    private let musicPlayer = MPMusicPlayerController.applicationQueuePlayer
     private var speechPlayer: AVAudioPlayer?
     private var playbackItems: [StationPlaybackItem] = []
-    private var lastMusicStatus: MusicKit.MusicPlayer.PlaybackStatus = .stopped
-    private var musicStateCancellable: AnyCancellable?
+    private var lastMusicStatus: MPMusicPlaybackState = .stopped
+    private var playbackStateCancellable: AnyCancellable?
+    private var nowPlayingCancellable: AnyCancellable?
     private var isTransitioning = false
     private var isAwaitingSongCompletion = false
     private var hasObservedActiveSongPlayback = false
@@ -29,6 +29,7 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         observeMusicPlayerState()
         configureRemoteCommands()
         startProgressUpdates()
+        musicPlayer.beginGeneratingPlaybackNotifications()
     }
 
     func loadAndPlay(_ items: [StationPlaybackItem]) async throws {
@@ -86,14 +87,14 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
                 }
             }
         case .song:
-            switch musicPlayer.state.playbackStatus {
+            switch musicPlayer.playbackState {
             case .playing:
                 isUserPausingSong = true
                 musicPlayer.pause()
                 isPlaying = false
                 refreshPlaybackProgress()
             default:
-                try? await musicPlayer.play()
+                musicPlayer.play()
                 isUserPausingSong = false
                 isPlaying = true
                 refreshPlaybackProgress()
@@ -115,16 +116,14 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
-    func skipToNextSong() async {
-        guard let index = nextSongIndex(after: currentIndex) else { return }
-        currentIndex = index
-        try? await playCurrentItem()
+    func skipToNextSegment() async {
+        print("geddy::skipToNextSegement")
+        await playSegment(at: currentIndex + 1)
     }
 
-    func skipToPreviousSong() async {
-        guard let index = previousSongIndex(beforeOrAt: currentIndex) else { return }
-        currentIndex = index
-        try? await playCurrentItem()
+    func skipToPreviousSegment() async {
+        print("geddy::skipToPreviousSegment")
+        await playSegment(at: currentIndex - 1)
     }
 
     private func playCurrentItem() async throws {
@@ -150,6 +149,7 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
             let player = try AVAudioPlayer(contentsOf: clip.localFileURL)
             player.delegate = self
             player.prepareToPlay()
+            player.volume = 1.2
             player.play()
             speechPlayer = player
             isPlaying = true
@@ -158,11 +158,12 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
             refreshPlaybackProgress()
 
         case .song(let resolvedSong):
-            let queue = ApplicationMusicPlayer.Queue(for: [resolvedSong.song])
-            musicPlayer.queue = queue
+            let storeID = resolvedSong.id.rawValue
+            let descriptor = MPMusicPlayerStoreQueueDescriptor(storeIDs: [storeID])
+            musicPlayer.setQueue(with: descriptor)
             try await musicPlayer.prepareToPlay()
-            try await musicPlayer.play()
-            lastMusicStatus = musicPlayer.state.playbackStatus
+            musicPlayer.play()
+            lastMusicStatus = musicPlayer.playbackState
             isAwaitingSongCompletion = true
             hasObservedActiveSongPlayback = false
             isPlaying = true
@@ -183,32 +184,34 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         try? await playCurrentItem()
     }
 
-    private func nextSongIndex(after index: Int) -> Int? {
-        let start = min(index + 1, playbackItems.count)
-        guard start < playbackItems.count else { return nil }
-        return playbackItems[start...].firstIndex(where: { $0.kind == .song })
-    }
-
-    private func previousSongIndex(beforeOrAt index: Int) -> Int? {
-        guard !playbackItems.isEmpty else { return nil }
-        let clamped = min(index, playbackItems.count - 1)
-        if playbackItems[clamped].kind == .song {
-            return clamped
-        }
-
-        return playbackItems[0...clamped].lastIndex(where: { $0.kind == .song })
+    private func playSegment(at index: Int) async {
+        guard playbackItems.indices.contains(index) else { return }
+        currentIndex = index
+        try? await playCurrentItem()
     }
 
     private func observeMusicPlayerState() {
-        musicStateCancellable = musicPlayer.state.objectWillChange.sink { [weak self] in
-            Task { @MainActor in
-                self?.handleMusicStateChange()
-            }
+        let center = NotificationCenter.default
+
+        playbackStateCancellable = center.publisher(
+            for: .MPMusicPlayerControllerPlaybackStateDidChange,
+            object: musicPlayer
+        )
+        .sink { [weak self] _ in
+            self?.handleMusicStateChange()
+        }
+
+        nowPlayingCancellable = center.publisher(
+            for: .MPMusicPlayerControllerNowPlayingItemDidChange,
+            object: musicPlayer
+        )
+        .sink { [weak self] _ in
+            self?.refreshPlaybackProgress()
         }
     }
 
     private func handleMusicStateChange() {
-        let newStatus = musicPlayer.state.playbackStatus
+        let newStatus = musicPlayer.playbackState
         defer { lastMusicStatus = newStatus }
 
         guard let currentItem, currentItem.kind == .song else { return }
@@ -237,7 +240,7 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     }
 
     private func shouldAdvanceAfterSongCompletion(
-        for newStatus: MusicKit.MusicPlayer.PlaybackStatus
+        for newStatus: MPMusicPlaybackState
     ) -> Bool {
         guard isAwaitingSongCompletion, !isTransitioning else { return false }
         guard hasObservedActiveSongPlayback else { return false }
@@ -288,17 +291,21 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         }
 
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
+            print("geddy::command::next before task")
             guard let self else { return .commandFailed }
             Task { @MainActor in
-                await self.skipToNextSong()
+                print("geddy::command::next")
+                await self.skipToNextSegment()
             }
             return .success
         }
 
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
+            print("geddy::command::previous before task")
             guard let self else { return .commandFailed }
             Task { @MainActor in
-                await self.skipToPreviousSong()
+                print("geddy::command::previous")
+                await self.skipToPreviousSegment()
             }
             return .success
         }
@@ -338,7 +345,7 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     }
 
     private func currentMusicPlaybackTime() -> TimeInterval {
-        let playbackTime = musicPlayer.playbackTime
+        let playbackTime = musicPlayer.currentPlaybackTime
         guard playbackTime.isFinite else { return 0 }
         return max(playbackTime, 0)
     }

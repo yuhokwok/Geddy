@@ -75,12 +75,17 @@ struct ProgramSongPreferences: Codable, Hashable {
     let songCategory: SongCategoryOption
     let eraRangeStart: SongEraOption
     let eraRangeEnd: SongEraOption
+    let preferObscureSongs: Bool
 
     var eraSummary: String {
         if eraRangeStart == eraRangeEnd {
             return eraRangeStart.title
         }
         return "\(eraRangeStart.title) - \(eraRangeEnd.title)"
+    }
+
+    var obscureSongsSummary: String {
+        preferObscureSongs ? "盡量加入無咁大路嘅歌" : "以整體情緒流向為先"
     }
 }
 
@@ -216,6 +221,7 @@ struct DJProgramRequestBody: Codable {
     let songCategory: SongCategoryOption
     let eraRangeStart: Int
     let eraRangeEnd: Int
+    let preferObscureSongs: Bool
 
     enum CodingKeys: String, CodingKey {
         case transcript
@@ -224,6 +230,7 @@ struct DJProgramRequestBody: Codable {
         case songCategory = "song_category"
         case eraRangeStart = "era_range_start"
         case eraRangeEnd = "era_range_end"
+        case preferObscureSongs = "prefer_obscure_songs"
     }
 }
 

@@ -69,7 +69,8 @@ struct DJBackendClient {
                 desiredSongCount: desiredSongCount,
                 songCategory: songPreferences.songCategory,
                 eraRangeStart: songPreferences.eraRangeStart.rawValue,
-                eraRangeEnd: songPreferences.eraRangeEnd.rawValue
+                eraRangeEnd: songPreferences.eraRangeEnd.rawValue,
+                preferObscureSongs: songPreferences.preferObscureSongs
             )
         )
 

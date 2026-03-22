@@ -16,8 +16,9 @@ DEFAULT_HOST_STYLE = """
 廣東話口吻自然，帶感性而不誇張的陪伴感。
 """.strip()
 
-DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-4.6"
+DEFAULT_OPENROUTER_MODEL = "z-ai/glm-5"
 #"openai/gpt-4o-mini"
+#"anthropic/claude-sonnet-4.6"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_API_KEY_CONFIG_PATH = (
     Path(__file__).resolve().parent / "openrouter_api_key.json"
@@ -92,6 +93,7 @@ class DJProgramRequest:
     song_category: str = SONG_CATEGORY_CANTONESE
     era_range_start: int = 2000
     era_range_end: int = MODERN_ERA_START
+    prefer_obscure_songs: bool = False
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> "DJProgramRequest":
@@ -113,6 +115,10 @@ class DJProgramRequest:
         era_range_end = _coerce_int(
             payload.get("era_range_end", MODERN_ERA_START),
             "era_range_end",
+        )
+        prefer_obscure_songs = _coerce_bool(
+            payload.get("prefer_obscure_songs", False),
+            "prefer_obscure_songs",
         )
 
         if not transcript:
@@ -145,6 +151,7 @@ class DJProgramRequest:
             song_category=song_category,
             era_range_start=era_range_start,
             era_range_end=era_range_end,
+            prefer_obscure_songs=prefer_obscure_songs,
         )
 
 
@@ -463,6 +470,7 @@ Rules:
 - 用字一定一定要香港廣東話口語，可以中英夾雜.
 - Songs should be emotionally coherent with the listener's situation.
 - Honor the requested song category and era range exactly unless the user explicitly asks to break that rule.
+- If the user asks for less mainstream songs, actively try to include deeper cuts and avoid filling the whole list with only the most obvious canon hits.
 - 用鄭子誠式嘅陪伴口吻做口應，然後歌與歌之間就住歌曲按排一段感性嘅說話，要提及下一首歌的內容，歌與歌手名字要正確，不要胡亂生成！
 - Do not search Apple Music, validate catalog availability, or return Apple Music IDs, URLs, or metadata.
 - songSuggestions are only editorial hints for the iOS app. The iOS app will run MusicKit search later using titleHint, artistHint, and searchQuery.
@@ -487,6 +495,9 @@ Requested song category:
 Requested era range:
 {_era_range_label(request.era_range_start, request.era_range_end)}
 
+Preference for less mainstream songs:
+{_obscure_song_preference_label(request.prefer_obscure_songs)}
+
 Please create a complete radio program plan with exactly {request.desired_song_count} songs that stay inside the requested category and era range.
 Return song suggestions only. Music lookup will be handled by the iOS app after this response.
 """.strip()
@@ -509,6 +520,11 @@ class RuleBasedDJProgramPlanner:
                 f"你頭先講咗一句：「{transcript}」。",
                 "有啲感受，唔一定要即刻講清楚，但可以慢慢聽清楚。",
                 f"我想用一組{_song_category_label(request.song_category)}，陪你由{_era_range_label(request.era_range_start, request.era_range_end)}一路行過呢段 {theme.mood}。",
+                *(
+                    ["今次我都會試下幫你搵幾首無咁大路、但同樣貼題嘅歌。"]
+                    if request.prefer_obscure_songs
+                    else []
+                ),
                 theme.opening_lead,
             ]
         )
@@ -572,6 +588,10 @@ class RuleBasedDJProgramPlanner:
         ordered = _dedupe_song_suggestions(
             (*matched_theme_songs, *matched_catalog_songs)
         )
+        ordered = _prioritize_obscure_song_suggestions(
+            ordered,
+            prefer_obscure_songs=request.prefer_obscure_songs,
+        )
 
         if len(ordered) < request.desired_song_count:
             ordered = _dedupe_song_suggestions(
@@ -580,6 +600,10 @@ class RuleBasedDJProgramPlanner:
                     *[item.suggestion for item in theme.songs],
                     *[item.suggestion for item in self._catalog_songs],
                 )
+            )
+            ordered = _prioritize_obscure_song_suggestions(
+                ordered,
+                prefer_obscure_songs=request.prefer_obscure_songs,
             )
 
         return ordered[: request.desired_song_count]
@@ -791,6 +815,17 @@ def _coerce_int(value: Any, field_name: str) -> int:
         raise ValidationError(f"`{field_name}` must be an integer.") from exc
 
 
+def _coerce_bool(value: Any, field_name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off", ""}:
+        return False
+    raise ValidationError(f"`{field_name}` must be a boolean.")
+
+
 def _normalize_song_category(value: Any) -> str:
     normalized = str(value or "").strip().lower()
     aliases = {
@@ -813,6 +848,12 @@ def _song_category_label(category: str) -> str:
     if category == SONG_CATEGORY_MANDARIN:
         return "華語歌"
     return "廣東歌"
+
+
+def _obscure_song_preference_label(prefer_obscure_songs: bool) -> str:
+    if prefer_obscure_songs:
+        return "有，請試下加入無咁大路、但貼題而且合理嘅歌。"
+    return "無，按整體情緒流向安排即可。"
 
 
 def _era_label(era_start: int) -> str:
@@ -870,6 +911,44 @@ def _collect_catalog_songs(themes: tuple[ThemePack, ...]) -> tuple[CuratedSong, 
             seen.add(key)
             ordered.append(song)
     return tuple(ordered)
+
+
+_MAINSTREAM_SONG_KEYS = {
+    ("明年今日".casefold(), "陳奕迅".casefold()),
+    ("十年".casefold(), "陳奕迅".casefold()),
+    ("小幸運".casefold(), "田馥甄".casefold()),
+    ("後來".casefold(), "劉若英".casefold()),
+    ("海闊天空".casefold(), "Beyond".casefold()),
+    ("千千闋歌".casefold(), "陳慧嫻".casefold()),
+    ("月亮代表我的心".casefold(), "鄧麗君".casefold()),
+    ("勇氣".casefold(), "梁靜茹".casefold()),
+    ("光年之外".casefold(), "G.E.M.".casefold()),
+    ("如果可以".casefold(), "韋禮安".casefold()),
+    ("刻在我心底的名字".casefold(), "盧廣仲".casefold()),
+    ("追".casefold(), "張國榮".casefold()),
+    ("高山低谷".casefold(), "林奕匡".casefold()),
+}
+
+
+def _prioritize_obscure_song_suggestions(
+    suggestions: list[SongSuggestion],
+    *,
+    prefer_obscure_songs: bool,
+) -> list[SongSuggestion]:
+    if not prefer_obscure_songs:
+        return suggestions
+
+    return sorted(
+        suggestions,
+        key=lambda song: (
+            (
+                song.titleHint.casefold(),
+                song.artistHint.casefold(),
+            ) in _MAINSTREAM_SONG_KEYS,
+            song.titleHint.casefold(),
+            song.artistHint.casefold(),
+        ),
+    )
 
 
 def _dedupe_song_suggestions(

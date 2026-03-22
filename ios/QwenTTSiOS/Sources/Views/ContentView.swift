@@ -12,9 +12,11 @@ struct ContentView: View {
                     voiceInputSection
                     showControlsSection
                     playlistSection
+                    savedProgramsSection
                 }
                 .padding(20)
             }
+            .scrollDismissesKeyboard(.immediately)
             .background {
                 Rectangle()
                     .fill(backgroundGradient)
@@ -42,6 +44,12 @@ struct ContentView: View {
         .sheet(isPresented: $isShowingSettings) {
             SettingsView(viewModel: viewModel)
         }
+        .overlay {
+            if viewModel.isPreparingShow {
+                preparingShowOverlay
+                    .transition(.opacity)
+            }
+        }
         .alert("Geddy", isPresented: Binding(
             get: { viewModel.alertMessage != nil },
             set: { shouldShow in
@@ -55,6 +63,51 @@ struct ContentView: View {
             }
         } message: {
             Text(viewModel.alertMessage ?? "")
+        }
+    }
+
+    private var preparingShowOverlay: some View {
+        ZStack {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.98, green: 0.93, blue: 0.85).opacity(0.94),
+                            Color(red: 0.92, green: 0.82, blue: 0.72).opacity(0.96)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                Image("88-icon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 120, height: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .shadow(color: Color.black.opacity(0.12), radius: 20, y: 10)
+
+                VStack(spacing: 10) {
+                    Text("Geddy 正在為你用心點歌，請放下手機稍等")
+                        .font(.title3.weight(.bold))
+                        .multilineTextAlignment(.center)
+
+                    ProgressView()
+                        .tint(Color(red: 0.84, green: 0.37, blue: 0.18))
+                        .scaleEffect(1.15)
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 26)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
+                )
+                .padding(.horizontal, 24)
+            }
+            .padding(.horizontal, 24)
         }
     }
 
@@ -196,6 +249,19 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle(isOn: $viewModel.preferObscureSongs) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("想要冷門歌曲")
+                                .font(.subheadline.weight(.semibold))
+                            Text(viewModel.songPreferences.obscureSongsSummary)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .toggleStyle(.switch)
+                }
+
                 Button {
                     Task {
                         await viewModel.prepareShow()
@@ -280,6 +346,36 @@ struct ContentView: View {
     }
 
     @ViewBuilder
+    private var savedProgramsSection: some View {
+        if viewModel.currentShow != nil || !viewModel.savedPrograms.isEmpty {
+            card("已儲存節目") {
+                VStack(alignment: .leading, spacing: 14) {
+                    if viewModel.currentShow != nil {
+                        Button {
+                            viewModel.saveCurrentShow()
+                        } label: {
+                            Label("儲存而家節目", systemImage: "square.and.arrow.down")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color(red: 0.84, green: 0.37, blue: 0.18))
+                    }
+
+                    if viewModel.savedPrograms.isEmpty {
+                        Text("未有已儲存節目。之後你可以將編排好嘅節目儲低，再喺呢度揀返嚟聽。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(viewModel.savedPrograms) { savedProgram in
+                            savedProgramRow(savedProgram)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var bottomPlayerBar: some View {
         if viewModel.currentShow != nil {
             VStack(alignment: .leading, spacing: 14) {
@@ -325,13 +421,14 @@ struct ContentView: View {
                 HStack(spacing: 10) {
                     Button {
                         Task {
-                            await viewModel.skipToPreviousSong()
+                            await viewModel.skipToPreviousSegment()
                         }
                     } label: {
                         Image(systemName: "backward.end.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityLabel("上一段")
 
                     Button {
                         Task {
@@ -346,13 +443,14 @@ struct ContentView: View {
 
                     Button {
                         Task {
-                            await viewModel.skipToNextSong()
+                            await viewModel.skipToNextSegment()
                         }
                     } label: {
                         Image(systemName: "forward.end.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityLabel("下一段")
 
                     Button {
                         viewModel.stopPlayback()
@@ -366,11 +464,53 @@ struct ContentView: View {
             .padding(.horizontal, 20)
             .padding(.top, 12)
             .padding(.bottom, 16)
-            .background(.ultraThinMaterial)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.white.opacity(0.35))
-                    .frame(height: 1)
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(.ultraThinMaterial)
+
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.36),
+                                    Color.white.opacity(0.1)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .stroke(Color.white.opacity(0.48), lineWidth: 1)
+
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Color.white.opacity(0.22),
+                                    Color.clear
+                                ],
+                                center: .topLeading,
+                                startRadius: 8,
+                                endRadius: 220
+                            )
+                        )
+                }
+                .shadow(color: Color.black.opacity(0.08), radius: 24, y: -6)
+                .padding(.horizontal, 10)
+                .padding(.top, 8)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.16),
+                            Color.clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .ignoresSafeArea()
+                )
             }
         }
     }
@@ -418,6 +558,56 @@ struct ContentView: View {
         }
         .padding(14)
         .background(Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private func savedProgramRow(_ savedProgram: SavedProgramSummary) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(savedProgram.title)
+                        .font(.headline)
+                    Text(savedProgram.moodSummary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 12)
+                HStack(spacing: 8) {
+                    Button {
+                        Task {
+                            await viewModel.loadSavedProgram(savedProgram)
+                        }
+                    } label: {
+                        Label("再聽", systemImage: "play.fill")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button(role: .destructive) {
+                        viewModel.deleteSavedProgram(savedProgram)
+                    } label: {
+                        Label("刪除", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            if !savedProgram.transcriptPreview.isEmpty {
+                Text(savedProgram.transcriptPreview)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            HStack {
+                Text("\(savedProgram.songCount) 首歌")
+                Spacer()
+                Text(savedProgram.savedAt.formatted(date: .abbreviated, time: .shortened))
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.5), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private func spokenCard(
