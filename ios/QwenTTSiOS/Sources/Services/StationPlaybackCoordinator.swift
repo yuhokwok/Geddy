@@ -14,11 +14,7 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     private let musicPlayer = MPMusicPlayerController.applicationQueuePlayer
     private let speechPlayer = AVQueuePlayer()
     private var playbackItems: [StationPlaybackItem] = []
-    private var songItems: [StationPlaybackItem] = []
-    private var speechItems: [StationPlaybackItem] = []
-    private var songQueueIndexByQueueKey: [String: Int] = [:]
-    private var speechQueueIndexByQueueKey: [String: Int] = [:]
-    private var speechQueueKeyByPlayerItemID: [ObjectIdentifier: String] = [:]
+    private var currentSpeechPlayerItemID: ObjectIdentifier?
     private var lastMusicStatus: MPMusicPlaybackState = .stopped
     private var playbackStateCancellable: AnyCancellable?
     private var nowPlayingCancellable: AnyCancellable?
@@ -27,6 +23,7 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     private var isTransitioning = false
     private var hasObservedActiveSongPlayback = false
     private var isUserPausingSong = false
+    private var isAdvancingAfterSongCompletion = false
 
     override init() {
         super.init()
@@ -42,7 +39,6 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     func loadAndPlay(_ items: [StationPlaybackItem]) async throws {
         guard !items.isEmpty else { return }
         playbackItems = items
-        rebuildQueueMetadata()
         currentIndex = 0
         try await playCurrentItem()
     }
@@ -52,7 +48,6 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
 
         let currentQueueKey = currentItem?.queueKey
         playbackItems = items
-        rebuildQueueMetadata()
 
         if let currentQueueKey,
            let updatedIndex = playbackItems.firstIndex(where: { $0.queueKey == currentQueueKey }) {
@@ -103,13 +98,14 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
     func stop() {
         speechPlayer.pause()
         speechPlayer.removeAllItems()
-        speechQueueKeyByPlayerItemID.removeAll()
+        currentSpeechPlayerItemID = nil
         musicPlayer.stop()
         currentItem = nil
         currentIndex = 0
         isPlaying = false
         hasObservedActiveSongPlayback = false
         isUserPausingSong = false
+        isAdvancingAfterSongCompletion = false
         currentPlaybackTime = 0
         currentPlaybackDuration = 0
         MPNowPlayingInfoCenter.default().playbackState = .stopped
@@ -124,17 +120,6 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         await playSegment(at: currentIndex - 1)
     }
 
-    private func rebuildQueueMetadata() {
-        songItems = playbackItems.filter { $0.kind == .song }
-        speechItems = playbackItems.filter { $0.kind != .song }
-        songQueueIndexByQueueKey = Dictionary(
-            uniqueKeysWithValues: songItems.enumerated().map { ($0.element.queueKey, $0.offset) }
-        )
-        speechQueueIndexByQueueKey = Dictionary(
-            uniqueKeysWithValues: speechItems.enumerated().map { ($0.element.queueKey, $0.offset) }
-        )
-    }
-
     private func playCurrentItem() async throws {
         guard playbackItems.indices.contains(currentIndex) else { return }
 
@@ -147,12 +132,13 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         currentPlaybackDuration = item.durationSeconds
         hasObservedActiveSongPlayback = false
         isUserPausingSong = false
+        isAdvancingAfterSongCompletion = false
 
         switch item.payload {
         case .speech:
             musicPlayer.pause()
             musicPlayer.stop()
-            try prepareSpeechQueue(startingAt: item.queueKey)
+            try prepareSpeechPlayer(for: item)
             await speechPlayer.seek(to: .zero)
             speechPlayer.play()
             isPlaying = true
@@ -160,8 +146,8 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         case .song:
             speechPlayer.pause()
             speechPlayer.removeAllItems()
-            speechQueueKeyByPlayerItemID.removeAll()
-            try await prepareMusicQueue(startingAt: item.queueKey)
+            currentSpeechPlayerItemID = nil
+            try await prepareMusicQueue(for: item)
             musicPlayer.play()
             lastMusicStatus = musicPlayer.playbackState
             isPlaying = true
@@ -171,45 +157,23 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         refreshPlaybackProgress()
     }
 
-    private func prepareSpeechQueue(startingAt queueKey: String) throws {
-        guard let targetIndex = speechQueueIndexByQueueKey[queueKey] else {
-            throw PlaybackError.missingQueueKey(queueKey)
+    private func prepareSpeechPlayer(for item: StationPlaybackItem) throws {
+        guard let clip = item.spokenClip else {
+            throw PlaybackError.invalidSpeechItem(item.title)
         }
-
         speechPlayer.pause()
         speechPlayer.removeAllItems()
-        speechQueueKeyByPlayerItemID.removeAll()
-
-        var previousItem: AVPlayerItem?
-        for playbackItem in speechItems {
-            guard let clip = playbackItem.spokenClip else {
-                throw PlaybackError.invalidSpeechItem(playbackItem.title)
-            }
-            let playerItem = AVPlayerItem(url: clip.localFileURL)
-            speechQueueKeyByPlayerItemID[ObjectIdentifier(playerItem)] = playbackItem.queueKey
-            speechPlayer.insert(playerItem, after: previousItem)
-            previousItem = playerItem
-        }
-
-        if targetIndex > 0 {
-            for _ in 0..<targetIndex {
-                speechPlayer.advanceToNextItem()
-            }
-        }
+        let playerItem = AVPlayerItem(url: clip.localFileURL)
+        currentSpeechPlayerItemID = ObjectIdentifier(playerItem)
+        speechPlayer.insert(playerItem, after: nil)
     }
 
-    private func prepareMusicQueue(startingAt queueKey: String) async throws {
-        guard let targetIndex = songQueueIndexByQueueKey[queueKey] else {
-            throw PlaybackError.missingQueueKey(queueKey)
-        }
-
-        let storeIDs = songItems.compactMap { $0.resolvedSong?.id.rawValue }
-        guard storeIDs.indices.contains(targetIndex) else {
+    private func prepareMusicQueue(for item: StationPlaybackItem) async throws {
+        guard let resolvedSong = item.resolvedSong else {
             throw PlaybackError.invalidSongQueue
         }
 
-        let descriptor = MPMusicPlayerStoreQueueDescriptor(storeIDs: storeIDs)
-        descriptor.startItemID = storeIDs[targetIndex]
+        let descriptor = MPMusicPlayerStoreQueueDescriptor(storeIDs: [resolvedSong.id.rawValue])
         musicPlayer.setQueue(with: descriptor)
         try await musicPlayer.prepareToPlay()
     }
@@ -247,7 +211,7 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
             object: musicPlayer
         )
         .sink { [weak self] _ in
-            self?.handleMusicNowPlayingItemChange()
+            self?.refreshPlaybackProgress()
         }
     }
 
@@ -278,13 +242,10 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         case .playing:
             isPlaying = true
             hasObservedActiveSongPlayback = true
+            isAdvancingAfterSongCompletion = false
         case .paused, .interrupted, .stopped:
             isPlaying = false
-            if shouldAdvanceAfterSongQueueStopped(for: newStatus) {
-                Task { @MainActor in
-                    await self.playNextSequentialItem()
-                }
-            }
+            advanceToNextSegmentAfterSongIfNeeded(for: newStatus)
         case .seekingForward, .seekingBackward:
             break
         @unknown default:
@@ -299,9 +260,9 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         for newStatus: MPMusicPlaybackState
     ) -> Bool {
         guard !isTransitioning else { return false }
+        guard !isAdvancingAfterSongCompletion else { return false }
         guard hasObservedActiveSongPlayback else { return false }
         guard currentItem?.kind == .song else { return false }
-        guard musicPlayer.nowPlayingItem == nil else { return false }
 
         if isUserPausingSong {
             isUserPausingSong = false
@@ -310,52 +271,32 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
 
         switch newStatus {
         case .paused, .stopped:
-            return true
+            return songPlaybackReachedEnd()
         default:
             return false
         }
     }
 
-    private func handleMusicNowPlayingItemChange() {
-        defer { refreshPlaybackProgress() }
+    private func songPlaybackReachedEnd() -> Bool {
+        guard let currentItem, let resolvedSong = currentItem.resolvedSong else { return false }
+        let duration = resolvedSong.song.duration ?? currentPlaybackDuration
+        guard duration > 0 else { return false }
 
-        guard !isTransitioning else { return }
-        guard let currentItem, currentItem.kind == .song else { return }
-        guard let currentSongIndex = songQueueIndexByQueueKey[currentItem.queueKey] else { return }
-        guard let nowPlayingStoreID = musicPlayer.nowPlayingItem?.playbackStoreID else { return }
+        let playbackTime = max(currentMusicPlaybackTime(), currentPlaybackTime)
+        return (duration - playbackTime) <= 1.0
+    }
 
-        guard let newSongIndex = songItems.firstIndex(where: {
-            $0.resolvedSong?.id.rawValue == nowPlayingStoreID
-        }) else {
-            return
-        }
-
-        guard newSongIndex != currentSongIndex else { return }
-
-        let direction = newSongIndex > currentSongIndex ? 1 : -1
-        let targetIndex = currentIndex + direction
-
-        guard playbackItems.indices.contains(targetIndex) else { return }
-
-        let targetItem = playbackItems[targetIndex]
-        if targetItem.kind == .song {
-            currentIndex = targetIndex
-            self.currentItem = targetItem
-            isPlaying = musicPlayer.playbackState == .playing
-            currentPlaybackDuration = targetItem.durationSeconds
-            updateNowPlaying(for: targetItem)
-            return
-        }
-
+    private func advanceToNextSegmentAfterSongIfNeeded(for newStatus: MPMusicPlaybackState) {
+        guard shouldAdvanceAfterSongQueueStopped(for: newStatus) else { return }
+        isAdvancingAfterSongCompletion = true
         Task { @MainActor in
-            await self.playSegment(at: targetIndex)
+            await self.playNextSequentialItem()
         }
     }
 
     private func handleSpeechItemDidFinish(playerItemID: ObjectIdentifier) {
         guard !isTransitioning else { return }
-        guard let finishedQueueKey = speechQueueKeyByPlayerItemID[playerItemID] else { return }
-        guard currentItem?.queueKey == finishedQueueKey else { return }
+        guard currentSpeechPlayerItemID == playerItemID else { return }
 
         Task { @MainActor in
             await self.playNextSequentialItem()
@@ -393,7 +334,6 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         }
 
         commandCenter.nextTrackCommand.addTarget { [weak self] _ in
-            print("geddy::command::next")
             guard let self else { return .commandFailed }
             Task { @MainActor in
                 await self.skipToNextSegment()
@@ -402,7 +342,6 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
         }
 
         commandCenter.previousTrackCommand.addTarget { [weak self] _ in
-            print("geddy::command::prev")
             guard let self else { return .commandFailed }
             Task { @MainActor in
                 await self.skipToPreviousSegment()
@@ -446,6 +385,9 @@ final class StationPlaybackCoordinator: NSObject, ObservableObject {
             currentPlaybackDuration = resolvedSong.song.duration ?? currentPlaybackDuration
             currentPlaybackTime = min(currentMusicPlaybackTime(), max(currentPlaybackDuration, 0))
             isPlaying = musicPlayer.playbackState == .playing
+            if musicPlayer.playbackState != .playing {
+                advanceToNextSegmentAfterSongIfNeeded(for: musicPlayer.playbackState)
+            }
         }
 
         updateNowPlaying(for: currentItem)

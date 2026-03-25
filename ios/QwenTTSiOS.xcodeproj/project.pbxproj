@@ -17,7 +17,7 @@
 		C5FAFE4437D83C8A8401284F /* DJBackendClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20BCB7743F954EAF8A7486B4 /* DJBackendClient.swift */; };
 		E06E69C003152F2F6C87EC20 /* RadioDJViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D63D7F67A1C23B4546D3F089 /* RadioDJViewModel.swift */; };
 		E811EDDD95138C431083C513 /* PrototypeShowPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A399BC0C9932B7BDD631F955 /* PrototypeShowPlanner.swift */; };
-		EDA3A7A52F70198E000D804D /* 88-icon.png in Resources */ = {isa = PBXBuildFile; fileRef = EDA3A7A32F70101B000D804D /* 88-icon.png */; };
+		EDA3A7E82F74126D000D804D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EDA3A7E72F74126D000D804D /* Assets.xcassets */; };
 		EF1D9BAA78F4EBB38A0F1EAD /* RadioDJModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE574C5396FD76B940E2620D /* RadioDJModels.swift */; };
 /* End PBXBuildFile section */
 
@@ -34,6 +34,7 @@
 		CDBDD94B56853165B0C22A71 /* SpeechCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechCaptureService.swift; sourceTree = "<group>"; };
 		D63D7F67A1C23B4546D3F089 /* RadioDJViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioDJViewModel.swift; sourceTree = "<group>"; };
 		EDA3A7A32F70101B000D804D /* 88-icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "88-icon.png"; sourceTree = "<group>"; };
+		EDA3A7E72F74126D000D804D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F4EACBEBF8C87CF963760FA0 /* AppleMusicCatalogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMusicCatalogService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -64,6 +65,7 @@
 				0F9951BE39F5431055556766 /* ViewModels */,
 				8BF560D55A8B86B6A665AC79 /* Views */,
 				EDA3A7A32F70101B000D804D /* 88-icon.png */,
+				EDA3A7E72F74126D000D804D /* Assets.xcassets */,
 			);
 			name = Sources;
 			path = QwenTTSiOS/Sources;
@@ -168,7 +170,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EDA3A7A52F70198E000D804D /* 88-icon.png in Resources */,
+				EDA3A7E82F74126D000D804D /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -207,7 +209,7 @@
 				DEVELOPMENT_TEAM = G747L87TGJ;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = QwenTTSiOS/Resources/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -289,7 +291,7 @@
 				DEVELOPMENT_TEAM = G747L87TGJ;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = QwenTTSiOS/Resources/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

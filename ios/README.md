@@ -1,6 +1,6 @@
-# AI 鄭子誠 iOS frontend
+# Geddy iOS frontend
 
-This folder contains a SwiftUI iOS app prototype for an AI radio DJ called `AI 鄭子誠`.
+This folder contains a SwiftUI iOS app prototype for an AI radio DJ called `Geddy`.
 
 ## What it does
 

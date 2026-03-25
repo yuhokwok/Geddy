@@ -16,7 +16,8 @@ DEFAULT_HOST_STYLE = """
 廣東話口吻自然，帶感性而不誇張的陪伴感。
 """.strip()
 
-DEFAULT_OPENROUTER_MODEL = "z-ai/glm-5"
+DEFAULT_OPENROUTER_MODEL = "openai/gpt-5.4"
+#"z-ai/glm-5"
 #"openai/gpt-4o-mini"
 #"anthropic/claude-sonnet-4.6"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -123,13 +124,13 @@ class DJProgramRequest:
 
         if not transcript:
             raise ValidationError("`transcript` is required.")
-        if len(transcript) > 1000:
+        if len(transcript) > 600:
             raise ValidationError(
-                "`transcript` is too long. Keep it under 1000 characters."
+                "`transcript` is too long. Keep it under 600 characters."
             )
-        if len(host_style) > 1000:
+        if len(host_style) > 600:
             raise ValidationError(
-                "`host_style` is too long. Keep it under 1000 characters."
+                "`host_style` is too long. Keep it under 600 characters."
             )
         if desired_song_count < 5 or desired_song_count > 8:
             raise ValidationError("`desired_song_count` must be between 5 and 8.")
@@ -434,6 +435,9 @@ class OpenRouterDJProgramPlanner:
             },
         }
 
+
+#，但如對方情緒低落，不要過度負面或者攻擊性，保持溫柔陪伴的基調。
+#- songSuggestions are only editorial hints for the iOS app. The iOS app will run MusicKit search later using titleHint, artistHint, and searchQuery.
     def _system_prompt(self, desired_song_count: int) -> str:
         return f"""
 You are an expert Hong Kong emotional radio DJ writer.
@@ -467,13 +471,18 @@ Required JSON shape:
 }}
 
 Rules:
-- 用字一定一定要香港廣東話口語，可以中英夾雜.
+- 用字一定一定要香港廣東話口語，可以中英夾雜. 不要太書面或者太文青，保持自然口語感。
 - Songs should be emotionally coherent with the listener's situation.
 - Honor the requested song category and era range exactly unless the user explicitly asks to break that rule.
-- If the user asks for less mainstream songs, actively try to include deeper cuts and avoid filling the whole list with only the most obvious canon hits.
-- 用鄭子誠式嘅陪伴口吻做口應，然後歌與歌之間就住歌曲按排一段感性嘅說話，要提及下一首歌的內容，歌與歌手名字要正確，不要胡亂生成！
+- If the user asks for less mainstream songs, actively try to include deeper cuts and avoid filling the whole list with only the most obvious canon hits 可以考慮冷門一點或獨立歌手.
+- 不要亂作歌，一定要確保歌名、歌手和歌曲內容都是真實存在的，並且符合要求的類別和年代。
+- 用 Geddy 式嘅陪伴口吻做口應，然後歌與歌之間就住歌曲按排一段感性嘅說話，要提及下一首歌的內容，歌與歌手名字要正確，不要胡亂生成！
+- 音樂情人係要有少少不羈，所以唔可以咁樣道德底線，例如如果你覺得對像太 on9 值得恥笑，都可以盡情腹黑地恥笑
+- 歌曲不要演唱會版, Live 版, Remix 版, Cover 版, Instrumental 版等等非原版，除非原版已經不存在或者非常難找。
+- 每段橋段應自然地引導到下一首歌。
+- 可以合宜地提及一些情緒上的細節，但不要過度解釋或誇張，讓歌曲本身成為情緒的主要承載。
+- 可以合宜地提及歌詞。
 - Do not search Apple Music, validate catalog availability, or return Apple Music IDs, URLs, or metadata.
-- songSuggestions are only editorial hints for the iOS app. The iOS app will run MusicKit search later using titleHint, artistHint, and searchQuery.
 - The opening, bridges, and closing should feel intimate, reflective, and radio-ready.
 - Keep a warm midnight-radio style as a persona, but do not assume the real-world time is currently night.
 - Avoid explicit time-of-day claims like 現在夜深、今晚、凌晨 unless the listener explicitly mentions that context.
@@ -548,7 +557,7 @@ class RuleBasedDJProgramPlanner:
                 "呢段節目差唔多嚟到尾聲。",
                 "你唔需要急住令自己變得冇事，因為真正嘅放低，通常都係慢慢學識同自己相處。",
                 theme.closing_lead,
-                "呢度係 AI 鄭子誠，下次你想搵人陪你聽歌、陪你整理心情，我會再喺度。",
+                "呢度係 Geddy，下次你想搵人陪你聽歌、陪你整理心情，我會再喺度。",
             ]
         )
 
@@ -690,7 +699,7 @@ def _build_theme_packs() -> list[ThemePack]:
     return [
         ThemePack(
             keywords=("分手", "掛住", "失戀", "ex", "miss", "love", "想你", "離開"),
-            title="AI 鄭子誠: 掛住一個人嘅夜",
+            title="Geddy: 掛住一個人嘅夜",
             mood="未放低的思念",
             opening_lead="如果你仲喺某段關係門口徘徊，希望呢個 playlist 可以陪你坐低一陣。",
             closing_lead="記住，真正重要嘅唔係你幾時忘記，而係你幾時肯重新溫柔對待自己。",
@@ -719,7 +728,7 @@ def _build_theme_packs() -> list[ThemePack]:
         ),
         ThemePack(
             keywords=("回憶", "以前", "青春", "舊", "懷念", "nostalgia"),
-            title="AI 鄭子誠: 舊日時光特輯",
+            title="Geddy: 舊日時光特輯",
             mood="懷舊和餘溫",
             opening_lead="有些年份過咗去，但某一首歌一響，原來連空氣都會陪你回去。",
             closing_lead="回憶最動人嘅地方，唔係要你回頭，而係提醒你曾經好認真咁活過。",
@@ -748,7 +757,7 @@ def _build_theme_packs() -> list[ThemePack]:
         ),
         ThemePack(
             keywords=("辛苦", "攰", "工作", "壓力", "加油", "heal", "healing", "support"),
-            title="AI 鄭子誠: 給努力生活的人",
+            title="Geddy: 給努力生活的人",
             mood="療癒與重新呼吸",
             opening_lead="如果你今日已經用盡力氣，依家就唔好再逼自己堅強，先慢慢抖一口氣。",
             closing_lead="希望你記住，溫柔唔係軟弱，而係明知辛苦仍然願意對自己好一點。",
@@ -781,7 +790,7 @@ def _build_theme_packs() -> list[ThemePack]:
 def _build_default_theme() -> ThemePack:
     return ThemePack(
         keywords=(),
-        title="AI 鄭子誠: 深夜陪伴線",
+        title="Geddy: 深夜陪伴線",
         mood="靜靜陪伴",
         opening_lead="唔知道你而家帶住咩心事入嚟，但我想先陪你慢慢坐低。",
         closing_lead="情緒總會慢慢有出口，但有人陪你行過，條路會冇咁難行。",

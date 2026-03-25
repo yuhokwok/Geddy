@@ -107,7 +107,7 @@ extension VoicePreset {
     static let fallbackPresets: [VoicePreset] = [
         VoicePreset(
             id: "ai_zhengziseng",
-            label: "AI 鄭子誠",
+            label: "Geddy",
             voiceDescription: "一把成熟、溫柔、帶少少磁性嘅香港深夜男 DJ 聲線，說話節奏從容，情感細膩，像在凌晨電台陪伴失眠聽眾，廣東話口吻自然，帶感性而不誇張的陪伴感。"
         ),
         VoicePreset(

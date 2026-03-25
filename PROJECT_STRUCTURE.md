@@ -17,7 +17,7 @@ This repository contains two main parts:
    - asks the backend to synthesize spoken clips
    - plays speech clips and songs in sequence
 
-The product idea is an emotional music companion app, branded in the iOS app as `AI 鄭子誠` and described here as a `音樂情人` experience. The hosting style can feel like a midnight radio DJ, but product behavior should not assume the user is only using the app at night.
+The product idea is an emotional music companion app, branded in the iOS app as `Geddy` and described here as a `音樂情人` experience. The hosting style can feel like a midnight radio DJ, but product behavior should not assume the user is only using the app at night.
 
 ## Revised Product Direction
 

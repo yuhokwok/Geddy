@@ -4,7 +4,7 @@ from __future__ import annotations
 VOICE_PRESETS = [
     {
         "id": "ai_zhengziseng",
-        "label": "AI 鄭子誠",
+        "label": "Geddy",
         "description": (
             "一把成熟、溫柔、帶少少磁性，講廣東話嘅香港深夜男 DJ 聲線，"
             "說話節奏從容，情感細膩，像在凌晨電台陪伴失眠聽眾，"

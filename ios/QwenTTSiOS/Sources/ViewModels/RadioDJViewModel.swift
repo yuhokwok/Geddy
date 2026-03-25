@@ -643,7 +643,7 @@ final class RadioDJViewModel: ObservableObject {
                         title: "感性獨白 \(index + 1)",
                         kind: .bridge,
                         text: bridge.text,
-                        subtitle: "AI 鄭子誠"
+                        subtitle: "Geddy"
                     )
                 )
             }
@@ -655,7 +655,7 @@ final class RadioDJViewModel: ObservableObject {
                 title: "收場白",
                 kind: .closing,
                 text: draft.closingMonologue,
-                subtitle: "AI 鄭子誠"
+                subtitle: "Geddy"
             )
         )
 
@@ -703,7 +703,7 @@ final class RadioDJViewModel: ObservableObject {
                         queueKey: "bridge-\(index)",
                         kind: .bridge,
                         title: clip.title,
-                        subtitle: "AI 鄭子誠",
+                        subtitle: "Geddy",
                         payload: .speech(clip)
                     )
                 )
@@ -716,7 +716,7 @@ final class RadioDJViewModel: ObservableObject {
                     queueKey: "closing",
                     kind: .closing,
                     title: closingClip.title,
-                    subtitle: "AI 鄭子誠",
+                    subtitle: "Geddy",
                     payload: .speech(closingClip)
                 )
             )

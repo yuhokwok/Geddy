@@ -101,7 +101,7 @@ struct PrototypeShowPlanner {
 
         let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         let openingLines = [
-            "呢度係 AI 鄭子誠。",
+            "呢度係 Geddy。",
             "你頭先講咗一句：「\(trimmedTranscript)」。",
             "有啲感受，唔一定要即刻講清楚，但可以慢慢聽清楚。",
             "我想用一組\(songPreferences.songCategory.title)，陪你由\(songPreferences.eraSummary)一路行過呢一段 \(theme.mood)。",
@@ -125,7 +125,7 @@ struct PrototypeShowPlanner {
         呢段節目差唔多嚟到尾聲。
         你唔需要急住令自己變得冇事，因為真正嘅放低，通常都係慢慢學識同自己相處。
         \(theme.closingLead)
-        呢度係 AI 鄭子誠，下次你想搵人陪你聽歌、陪你整理心情，我會再喺度。
+        呢度係 Geddy，下次你想搵人陪你聽歌、陪你整理心情，我會再喺度。
         """
 
         return RadioShowDraft(
@@ -227,7 +227,7 @@ extension PrototypeShowPlanner {
     private static let themePacks: [ThemePack] = [
         ThemePack(
             keywords: ["分手", "掛住", "失戀", "ex", "miss", "love", "想你", "離開"],
-            title: "AI 鄭子誠: 掛住一個人嘅夜",
+            title: "Geddy: 掛住一個人嘅夜",
             mood: "未放低的思念",
             openingLead: "如果你仲喺某段關係門口徘徊，希望呢個 playlist 可以陪你坐低一陣。",
             closingLead: "記住，真正重要嘅唔係你幾時忘記，而係你幾時肯重新溫柔對待自己。",
@@ -256,7 +256,7 @@ extension PrototypeShowPlanner {
         ),
         ThemePack(
             keywords: ["回憶", "以前", "青春", "舊", "懷念", "nostalgia"],
-            title: "AI 鄭子誠: 舊日時光特輯",
+            title: "Geddy: 舊日時光特輯",
             mood: "懷舊和餘溫",
             openingLead: "有些年份過咗去，但某一首歌一響，原來連空氣都會陪你回去。",
             closingLead: "回憶最動人嘅地方，唔係要你回頭，而係提醒你曾經好認真咁活過。",
@@ -285,7 +285,7 @@ extension PrototypeShowPlanner {
         ),
         ThemePack(
             keywords: ["辛苦", "攰", "工作", "壓力", "加油", "heal", "healing", "support"],
-            title: "AI 鄭子誠: 給努力生活的人",
+            title: "Geddy: 給努力生活的人",
             mood: "療癒與重新呼吸",
             openingLead: "如果你今日已經用盡力氣，依家就唔好再逼自己堅強，先慢慢抖一口氣。",
             closingLead: "希望你記住，溫柔唔係軟弱，而係明知辛苦仍然願意對自己好一點。",
@@ -316,7 +316,7 @@ extension PrototypeShowPlanner {
 
     private static let defaultTheme = ThemePack(
         keywords: [],
-        title: "AI 鄭子誠: 深夜陪伴線",
+        title: "Geddy: 深夜陪伴線",
         mood: "靜靜陪伴",
         openingLead: "唔知道你而家帶住咩心事入嚟，但我想先陪你慢慢坐低。",
         closingLead: "情緒總會慢慢有出口，但有人陪你行過，條路會冇咁難行。",
@@ -419,7 +419,7 @@ struct OnDeviceFoundationModelPlanner {
         }
 
         let instructions = """
-        你係香港情感電台 DJ 節目編導，幫一個叫 AI 鄭子誠嘅 iOS app 生成節目稿。
+        你係香港情感電台 DJ 節目編導，幫一個叫 Geddy 嘅 iOS app 生成節目稿。
         只可以用繁體中文，同自然廣東話口吻。
         要有完整節目結構：show title、mood summary、opening monologue、\(desiredSongCount) 首歌建議、\(max(desiredSongCount - 1, 0)) 段 bridge monologues、closing monologue。
         每首歌都要提供 titleHint、artistHint、searchQuery、reason。

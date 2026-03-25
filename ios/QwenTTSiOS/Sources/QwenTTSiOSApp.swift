@@ -8,7 +8,7 @@ struct QwenTTSiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            WrapperView()
         }
     }
 }
